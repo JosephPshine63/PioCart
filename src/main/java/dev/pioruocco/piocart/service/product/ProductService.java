@@ -9,10 +9,13 @@ import dev.pioruocco.piocart.model.Product;
 import dev.pioruocco.piocart.repository.CategoryRepository;
 import dev.pioruocco.piocart.repository.ImageRepository;
 import dev.pioruocco.piocart.repository.ProductRepository;
+import dev.pioruocco.piocart.repository.ProductSpecifications;
 import dev.pioruocco.piocart.request.AddProductRequest;
 import dev.pioruocco.piocart.request.ProductUpdateRequest;
+import dev.pioruocco.piocart.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,13 +36,14 @@ public class ProductService implements IProductService {
         // If No, the save it as a new category
         // The set as the new product category.
 
-        Category category = Optional.ofNullable(categoryRepository.findByName(request.getCategory().getName()))
-                .orElseGet(() -> {
-                    Category newCategory = new Category(request.getCategory().getName());
-                    return categoryRepository.save(newCategory);
-                });
+        Category category = findOrCreateCategory(request.getCategory().getName());
         request.setCategory(category);
         return productRepository.save(createProduct(request, category));
+    }
+
+    private Category findOrCreateCategory(String name) {
+        return Optional.ofNullable(categoryRepository.findByName(name))
+                .orElseGet(() -> categoryRepository.save(new Category(name)));
     }
 
     private Product createProduct(AddProductRequest request, Category category) {
@@ -82,7 +86,7 @@ public class ProductService implements IProductService {
         existingProduct.setInventory(request.getInventory());
         existingProduct.setDescription(request.getDescription());
 
-        Category category = categoryRepository.findByName(request.getCategory().getName());
+        Category category = findOrCreateCategory(request.getCategory().getName());
         existingProduct.setCategory(category);
         return  existingProduct;
 
@@ -121,6 +125,18 @@ public class ProductService implements IProductService {
     @Override
     public Long countProductsByBrandAndName(String brand, String name) {
         return productRepository.countByBrandAndName(brand, name);
+    }
+
+    @Override
+    public PageResponse<ProductDto> searchProducts(String category, String brand, String query, Pageable pageable) {
+        return PageResponse.of(
+                productRepository.findAll(ProductSpecifications.search(category, brand, query), pageable),
+                this::convertToDto);
+    }
+
+    @Override
+    public List<String> getBrands() {
+        return productRepository.findDistinctBrands();
     }
 
     @Override

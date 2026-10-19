@@ -5,6 +5,9 @@ import dev.pioruocco.piocart.request.AddProductRequest;
 import dev.pioruocco.piocart.request.ProductUpdateRequest;
 
 
+import dev.pioruocco.piocart.response.PageResponse;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 
 public interface IProductService {
@@ -19,6 +22,8 @@ public interface IProductService {
     List<Product> getProductsByName(String name);
     List<Product> getProductsByBrandAndName(String category, String name);
     Long countProductsByBrandAndName(String brand, String name);
+    PageResponse<ProductDto> searchProducts(String category, String brand, String query, Pageable pageable);
+    List<String> getBrands();
 
     List<ProductDto> getConvertedProducts(List<Product> products);
 

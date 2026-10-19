@@ -8,10 +8,12 @@ import dev.pioruocco.piocart.repository.ImageRepository;
 import dev.pioruocco.piocart.service.product.IProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.sql.rowset.serial.SerialBlob;
 import java.io.IOException;
+import java.sql.Blob;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +29,18 @@ public class ImageService implements IImageService {
     public Image getImageById(Long id) {
         return imageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No image found with id: " + id));
+    }
+
+    // Postgres large objects can only be read inside a transaction
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] getImageBytes(Long id) {
+        Blob blob = getImageById(id).getImage();
+        try {
+            return blob.getBytes(1, (int) blob.length());
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not read image " + id, e);
+        }
     }
 
     @Override

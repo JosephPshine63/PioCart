@@ -1,7 +1,9 @@
 package dev.pioruocco.piocart.service.order;
 
 import dev.pioruocco.piocart.dto.OrderDto;
+import dev.pioruocco.piocart.dto.OrderItemDto;
 import dev.pioruocco.piocart.enums.OrderStatus;
+import dev.pioruocco.piocart.exceptions.InsufficientStockException;
 import dev.pioruocco.piocart.exceptions.ResourceNotFoundException;
 import dev.pioruocco.piocart.model.Cart;
 import dev.pioruocco.piocart.model.Order;
@@ -9,14 +11,14 @@ import dev.pioruocco.piocart.model.OrderItem;
 import dev.pioruocco.piocart.model.Product;
 import dev.pioruocco.piocart.repository.OrderRepository;
 import dev.pioruocco.piocart.repository.ProductRepository;
-import dev.pioruocco.piocart.service.cart.CartService;
+import dev.pioruocco.piocart.service.cart.ICartService;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 
@@ -25,14 +27,16 @@ import java.util.List;
 public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
-    private final CartService cartService;
-    private final ModelMapper modelMapper;
+    private final ICartService cartService;
 
 
     @Transactional
     @Override
     public Order placeOrder(Long userId) {
         Cart cart   = cartService.getCartByUserId(userId);
+        if (cart == null || cart.getItems().isEmpty()) {
+            throw new ResourceNotFoundException("No items in the cart of user " + userId);
+        }
         Order order = createOrder(cart);
         List<OrderItem> orderItemList = createOrderItems(order, cart);
         order.setOrderItems(new HashSet<>(orderItemList));
@@ -44,7 +48,7 @@ public class OrderService implements IOrderService {
 
     private Order createOrder(Cart cart) {
         Order order = new Order();
-       order.setUser(cart.getUser());
+        order.setUser(cart.getUser());
         order.setOrderStatus(OrderStatus.PENDING);
         order.setOrderDate(LocalDate.now());
         return  order;
@@ -53,6 +57,9 @@ public class OrderService implements IOrderService {
      private List<OrderItem> createOrderItems(Order order, Cart cart) {
         return  cart.getItems().stream().map(cartItem -> {
             Product product = cartItem.getProduct();
+            if (cartItem.getQuantity() > product.getInventory()) {
+                throw new InsufficientStockException("Only " + product.getInventory() + " left for " + product.getName());
+            }
             product.setInventory(product.getInventory() - cartItem.getQuantity());
             productRepository.save(product);
             return  new OrderItem(
@@ -82,10 +89,28 @@ public class OrderService implements IOrderService {
     @Override
     public List<OrderDto> getUserOrders(Long userId) {
         List<Order> orders = orderRepository.findByUserId(userId);
-        return  orders.stream().map(this :: convertToDto).toList();
+        return  orders.stream()
+                .sorted(Comparator.comparing(Order::getOrderId).reversed())
+                .map(this :: convertToDto)
+                .toList();
     }
 
-    private OrderDto convertToDto(Order order) {
-        return modelMapper.map(order, OrderDto.class);
+    @Override
+    public OrderDto convertToDto(Order order) {
+        OrderDto orderDto = new OrderDto();
+        orderDto.setId(order.getOrderId());
+        orderDto.setUserId(order.getUser() != null ? order.getUser().getId() : null);
+        orderDto.setOrderDate(order.getOrderDate());
+        orderDto.setTotalAmount(order.getTotalAmount());
+        orderDto.setStatus(order.getOrderStatus().name());
+        orderDto.setItems(order.getOrderItems().stream().map(item -> {
+            OrderItemDto itemDto = new OrderItemDto();
+            itemDto.setProductId(item.getProduct().getId());
+            itemDto.setProductName(item.getProduct().getName());
+            itemDto.setQuantity(item.getQuantity());
+            itemDto.setPrice(item.getPrice());
+            return itemDto;
+        }).toList());
+        return orderDto;
     }
 }

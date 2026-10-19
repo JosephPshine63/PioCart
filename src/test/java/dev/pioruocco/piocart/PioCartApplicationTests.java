@@ -1,10 +1,8 @@
 package dev.pioruocco.piocart;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class PioCartApplicationTests {
+class PioCartApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoads() {
