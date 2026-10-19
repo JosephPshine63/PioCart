@@ -33,9 +33,9 @@ public class OrderService implements IOrderService {
     @Transactional
     @Override
     public Order placeOrder(Long userId) {
-        Cart cart   = cartService.getCartByUserId(userId);
-        if (cart == null || cart.getItems().isEmpty()) {
-            throw new ResourceNotFoundException("No items in the cart of user " + userId);
+        Cart cart = cartService.getOrCreateCartForUser(userId);
+        if (cart.getItems().isEmpty()) {
+            throw new IllegalArgumentException("The cart is empty");
         }
         Order order = createOrder(cart);
         List<OrderItem> orderItemList = createOrderItems(order, cart);
@@ -82,6 +82,15 @@ public class OrderService implements IOrderService {
     @Override
     public OrderDto getOrder(Long orderId) {
         return orderRepository.findById(orderId)
+                .map(this :: convertToDto)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+    }
+
+    // Someone else's order is reported as missing, so order ids can't be probed
+    @Override
+    public OrderDto getUserOrder(Long orderId, Long userId) {
+        return orderRepository.findById(orderId)
+                .filter(order -> order.getUser() != null && order.getUser().getId().equals(userId))
                 .map(this :: convertToDto)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }

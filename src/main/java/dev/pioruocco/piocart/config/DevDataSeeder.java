@@ -1,13 +1,17 @@
 package dev.pioruocco.piocart.config;
 
+import dev.pioruocco.piocart.enums.Role;
 import dev.pioruocco.piocart.model.Category;
 import dev.pioruocco.piocart.model.Product;
+import dev.pioruocco.piocart.model.User;
 import dev.pioruocco.piocart.repository.CategoryRepository;
 import dev.pioruocco.piocart.repository.ProductRepository;
+import dev.pioruocco.piocart.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,7 +19,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Fills an empty database with a small demo catalog. Active only with the "dev" profile.
+ * Fills an empty database with a small demo catalog and two accounts. Active only with the "dev" profile.
+ * Accounts: admin@piocart.dev / admin1234 (ADMIN), user@piocart.dev / user1234 (USER).
  */
 @Slf4j
 @Profile("dev")
@@ -24,10 +29,14 @@ import java.util.List;
 public class DevDataSeeder implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     @Override
     public void run(String... args) {
+        seedUser("admin@piocart.dev", "admin1234", "Admin", "PioCart", Role.ADMIN);
+        seedUser("user@piocart.dev", "user1234", "Demo", "User", Role.USER);
         if (productRepository.count() > 0) {
             return;
         }
@@ -54,5 +63,19 @@ public class DevDataSeeder implements CommandLineRunner {
                         "Pre-seasoned cast iron skillet.", home)
         ));
         log.info("Seeded demo catalog");
+    }
+
+    private void seedUser(String email, String password, String firstName, String lastName, Role role) {
+        if (userRepository.existsByEmail(email)) {
+            return;
+        }
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setRole(role);
+        userRepository.save(user);
+        log.info("Seeded {} account {}", role, email);
     }
 }

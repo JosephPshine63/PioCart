@@ -1,20 +1,13 @@
 package dev.pioruocco.piocart;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.pioruocco.piocart.model.Cart;
 import dev.pioruocco.piocart.model.Category;
 import dev.pioruocco.piocart.model.Product;
-import dev.pioruocco.piocart.model.User;
-import dev.pioruocco.piocart.repository.CartRepository;
 import dev.pioruocco.piocart.repository.CategoryRepository;
 import dev.pioruocco.piocart.repository.ProductRepository;
-import dev.pioruocco.piocart.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -28,26 +21,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ShopFlowIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @Autowired
     private ProductRepository productRepository;
     @Autowired
     private CategoryRepository categoryRepository;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private CartRepository cartRepository;
 
     private Product newProduct(String name, String brand, int inventory) {
         String categoryName = "cat-" + UUID.randomUUID();
         Category category = categoryRepository.save(new Category(categoryName));
         return productRepository.save(new Product(name, brand, new BigDecimal("10.00"), inventory, "desc", category));
-    }
-
-    private JsonNode data(MvcResult result) throws Exception {
-        return objectMapper.readTree(result.getResponse().getContentAsString()).get("data");
     }
 
     @Test
@@ -76,33 +57,41 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
     @Test
     void cartAddUpdateRemoveKeepsTotalsAndChecksStock() throws Exception {
         Product product = newProduct("Mug", "Acme", 3);
+        String token = registerUser();
 
-        JsonNode cart = data(mockMvc.perform(post("/api/v1/cartItems/item/add")
+        mockMvc.perform(get("/api/v1/carts/me").with(bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isEmpty());
+
+        JsonNode cart = data(mockMvc.perform(post("/api/v1/cartItems/me/add").with(bearer(token))
                         .param("productId", product.getId().toString())
                         .param("quantity", "2"))
                 .andExpect(status().isOk())
                 .andReturn());
-        long cartId = cart.get("cartId").asLong();
         assertThat(cart.get("totalAmount").decimalValue()).isEqualByComparingTo("20.00");
         assertThat(cart.get("items").get(0).get("product").get("id").asLong()).isEqualTo(product.getId());
 
-        mockMvc.perform(post("/api/v1/cartItems/item/add")
-                        .param("cartId", String.valueOf(cartId))
+        mockMvc.perform(post("/api/v1/cartItems/me/add").with(bearer(token))
                         .param("productId", product.getId().toString())
                         .param("quantity", "5"))
                 .andExpect(status().isConflict());
 
-        mockMvc.perform(put("/api/v1/cartItems/cart/{cartId}/product/{productId}/update", cartId, product.getId())
+        mockMvc.perform(put("/api/v1/cartItems/me/{productId}", product.getId()).with(bearer(token))
                         .param("quantity", "3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalAmount").value(30.00));
 
-        mockMvc.perform(delete("/api/v1/cartItems/cart/{cartId}/product/{productId}/remove", cartId, product.getId()))
+        // carts are per user
+        mockMvc.perform(get("/api/v1/carts/me").with(bearer(registerUser())))
+                .andExpect(jsonPath("$.data.items").isEmpty());
+
+        mockMvc.perform(delete("/api/v1/cartItems/me/{productId}", product.getId()).with(bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items").isEmpty());
 
-        mockMvc.perform(get("/api/v1/carts/{cartId}/my-cart", cartId))
+        mockMvc.perform(get("/api/v1/carts/me").with(bearer(token)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cartId").value(cart.get("cartId").asLong()))
                 .andExpect(jsonPath("$.data.totalAmount").value(0));
     }
 
@@ -113,6 +102,7 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
 
         JsonNode images = data(mockMvc.perform(multipart("/api/v1/images/upload")
                         .file(new MockMultipartFile("files", "poster.png", "image/png", bytes))
+                        .with(bearer(adminToken()))
                         .param("productId", product.getId().toString()))
                 .andExpect(status().isOk())
                 .andReturn());
@@ -126,37 +116,38 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
     @Test
     void placeOrderSnapshotsCartAndDecrementsInventory() throws Exception {
         Product product = newProduct("Notebook", "Acme", 10);
-        User user = new User();
-        user.setEmail(UUID.randomUUID() + "@example.com");
-        user.setFirstName("Test");
-        user.setLastName("User");
-        user = userRepository.save(user);
+        String token = registerUser();
 
-        Cart cart = new Cart();
-        cart.setUser(user);
-        cart = cartRepository.save(cart);
-        mockMvc.perform(post("/api/v1/cartItems/item/add")
-                        .param("cartId", cart.getId().toString())
+        mockMvc.perform(post("/api/v1/cartItems/me/add").with(bearer(token))
                         .param("productId", product.getId().toString())
                         .param("quantity", "4"))
                 .andExpect(status().isOk());
 
-        JsonNode order = data(mockMvc.perform(post("/api/v1/orders/order").param("userId", user.getId().toString()))
+        JsonNode order = data(mockMvc.perform(post("/api/v1/orders/order").with(bearer(token)))
                 .andExpect(status().isOk())
                 .andReturn());
+        long orderId = order.get("id").asLong();
         assertThat(order.get("status").asText()).isEqualTo("PENDING");
-        assertThat(order.get("userId").asLong()).isEqualTo(user.getId());
         assertThat(order.get("totalAmount").decimalValue()).isEqualByComparingTo("40.00");
         assertThat(order.get("items").get(0).get("quantity").asInt()).isEqualTo(4);
         assertThat(productRepository.findById(product.getId()).orElseThrow().getInventory()).isEqualTo(6);
 
-        mockMvc.perform(get("/api/v1/orders/user/{userId}", user.getId()))
+        mockMvc.perform(get("/api/v1/orders/me").with(bearer(token)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value(order.get("id").asLong()));
-        mockMvc.perform(get("/api/v1/orders/{orderId}/order", order.get("id").asLong()))
+                .andExpect(jsonPath("$.data[0].id").value(orderId));
+        mockMvc.perform(get("/api/v1/orders/{orderId}/order", orderId).with(bearer(token)))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/v1/orders/order").param("userId", user.getId().toString()))
+        // other users can't see it, admins can
+        mockMvc.perform(get("/api/v1/orders/{orderId}/order", orderId).with(bearer(registerUser())))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/orders/{orderId}/order", orderId).with(bearer(adminToken())))
+                .andExpect(status().isOk());
+
+        // the cart was emptied
+        mockMvc.perform(get("/api/v1/carts/me").with(bearer(token)))
+                .andExpect(jsonPath("$.data.items").isEmpty());
+        mockMvc.perform(post("/api/v1/orders/order").with(bearer(token)))
+                .andExpect(status().isBadRequest());
     }
 }

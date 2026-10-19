@@ -5,9 +5,9 @@ import dev.pioruocco.piocart.dto.CartItemDto;
 import dev.pioruocco.piocart.exceptions.ResourceNotFoundException;
 import dev.pioruocco.piocart.model.Cart;
 import dev.pioruocco.piocart.model.CartItem;
-import dev.pioruocco.piocart.repository.CartItemRepository;
 import dev.pioruocco.piocart.repository.CartRepository;
 import dev.pioruocco.piocart.service.product.IProductService;
+import dev.pioruocco.piocart.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +19,8 @@ import java.util.Comparator;
 @RequiredArgsConstructor
 public class CartService implements ICartService{
     private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
     private final IProductService productService;
+    private final IUserService userService;
 
     @Override
     public Cart getCart(Long id) {
@@ -29,14 +29,14 @@ public class CartService implements ICartService{
     }
 
 
+    // Empties the cart but keeps it, so the user's next add reuses it
     @Transactional
     @Override
     public void clearCart(Long id) {
         Cart cart = getCart(id);
-        cartItemRepository.deleteAllByCartId(id);
         cart.getItems().clear();
-        cartRepository.deleteById(id);
-
+        cart.setTotalAmount(BigDecimal.ZERO);
+        cartRepository.save(cart);
     }
 
     @Override
@@ -45,14 +45,16 @@ public class CartService implements ICartService{
         return cart.getTotalAmount();
     }
 
+    @Transactional
     @Override
-    public Long initializeNewCart() {
-        return cartRepository.save(new Cart()).getId();
-    }
-
-    @Override
-    public Cart getCartByUserId(Long userId) {
-        return cartRepository.findByUserId(userId);
+    public Cart getOrCreateCartForUser(Long userId) {
+        Cart cart = cartRepository.findByUserId(userId);
+        if (cart != null) {
+            return cart;
+        }
+        cart = new Cart();
+        cart.setUser(userService.getUserById(userId));
+        return cartRepository.save(cart);
     }
 
     @Override

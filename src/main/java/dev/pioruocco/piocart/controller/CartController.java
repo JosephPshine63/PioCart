@@ -1,13 +1,14 @@
 package dev.pioruocco.piocart.controller;
 
 import dev.pioruocco.piocart.dto.CartDto;
+import dev.pioruocco.piocart.model.Cart;
 import dev.pioruocco.piocart.response.ApiResponse;
+import dev.pioruocco.piocart.security.ShopUserDetails;
 import dev.pioruocco.piocart.service.cart.ICartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
 
 @RequiredArgsConstructor
 @RestController
@@ -15,21 +16,16 @@ import java.math.BigDecimal;
 public class CartController {
     private final ICartService cartService;
 
-    @GetMapping("/{cartId}/my-cart")
-    public ResponseEntity<ApiResponse> getCart( @PathVariable Long cartId) {
-        CartDto cart = cartService.convertToDto(cartService.getCart(cartId));
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse> getMyCart(@AuthenticationPrincipal ShopUserDetails user) {
+        CartDto cart = cartService.convertToDto(cartService.getOrCreateCartForUser(user.getId()));
         return ResponseEntity.ok(new ApiResponse("Success", cart));
     }
 
-    @DeleteMapping("/{cartId}/clear")
-    public ResponseEntity<ApiResponse> clearCart( @PathVariable Long cartId) {
-        cartService.clearCart(cartId);
-        return ResponseEntity.ok(new ApiResponse("Clear Cart Success!", null));
-    }
-
-    @GetMapping("/{cartId}/cart/total-price")
-    public ResponseEntity<ApiResponse> getTotalAmount( @PathVariable Long cartId) {
-        BigDecimal totalPrice = cartService.getTotalPrice(cartId);
-        return ResponseEntity.ok(new ApiResponse("Total Price", totalPrice));
+    @DeleteMapping("/me/clear")
+    public ResponseEntity<ApiResponse> clearMyCart(@AuthenticationPrincipal ShopUserDetails user) {
+        Cart cart = cartService.getOrCreateCartForUser(user.getId());
+        cartService.clearCart(cart.getId());
+        return ResponseEntity.ok(new ApiResponse("Clear Cart Success!", cartService.convertToDto(cart)));
     }
 }
