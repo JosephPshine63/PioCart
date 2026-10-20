@@ -40,7 +40,16 @@ npm run build   # build di produzione (richiede il backend raggiungibile)
 npm run start   # avvia la build di produzione
 npm run lint    # ESLint
 npm run typecheck  # tipi delle route e TypeScript
+npm run seo:check -- http://localhost:3000  # controllo SEO di un sito in esecuzione
 ```
+
+## SEO
+
+- I metadata di default sono in `app/layout.tsx`: title template, Open Graph (`openGraph()` di `lib/seo.ts` aggiunge `siteName` e `locale` anche nelle pagine figlie), card Twitter, autore e `themeColor`. URL, nome e colori del sito sono in `lib/site.ts`.
+- Ogni pagina pubblica ha la propria description e la canonical. Ricerche, pagine successive alla prima e aree private sono `noindex`; i deploy di preview di Vercel (`VERCEL_ENV=preview`) sono interamente `noindex` e il loro `robots.txt` blocca tutto.
+- Dati strutturati con `<JsonLd>` (`components/json-ld.tsx`): `WebSite` con `SearchAction` in home, `Product` e `BreadcrumbList` nelle pagine prodotto e categoria, `Person` con i profili dell'autore (`lib/contacts.ts`).
+- Le immagini di anteprima sono generate con `next/og` (`lib/og.tsx`): una per il sito e una per ogni categoria; i prodotti usano la prima foto.
+- `scripts/check-seo.mjs` controlla home, catalogo, `/about`, una categoria e un prodotto letti dalla sitemap: title al massimo di 60 caratteri, description tra 70 e 160, un solo `<h1>`, canonical, `og:image` e JSON-LD valido. In CI gira sul sito di produzione dopo il deploy.
 
 ## Deploy su Vercel
 
@@ -64,6 +73,7 @@ Vercel accetta richieste fino a 4,5 MB. Per questo le immagini dei prodotti veng
 - `app/checkout`, `components/checkout/` – riepilogo e avvio del pagamento con Stripe Checkout (`app/actions/checkout.ts`); `app/checkout/confirm` riceve il ritorno da Stripe, fa confermare l'ordine al backend e reindirizza a `/checkout/success` oppure di nuovo a `/checkout` con un avviso. Con `STRIPE_TEST_MODE=true` viene mostrata la carta di test
 - `app/account`, `components/account/` – area account: profilo con modifica di nome e cognome (`app/actions/account.ts`), storico degli ordini pagati (`/account/orders`) e dettaglio dell'ordine con stato (`/account/orders/[id]`)
 - `app/admin`, `components/admin/` – area di amministrazione (solo ruolo `ADMIN`, gli altri ricevono un 404): ordini con filtro per stato e cambio di stato (spedito, consegnato, annullato con rimborso Stripe), prodotti con creazione, modifica, eliminazione e caricamento di più immagini (una per richiesta, massimo 4 MB), categorie. Le Server Action sono in `app/actions/admin.ts` e invalidano la cache del catalogo
+- `app/about`, `lib/contacts.ts` – pagina del progetto e contatti dell'autore, mostrati anche nel footer
 - `app/products`, `app/categories/[name]` – catalogo con filtri, ordinamento e paginazione nei `searchParams`, pagina prodotto
 - `components/` – header, footer, griglia e vista catalogo, galleria prodotto e componenti shadcn/ui (`components/ui`)
 - `lib/api/` – client HTTP verso il backend, tipi dei DTO e funzioni del catalogo con cache

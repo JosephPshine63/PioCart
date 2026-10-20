@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCart } from "@/components/cart/add-to-cart";
+import { JsonLd } from "@/components/json-ld";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductGrid } from "@/components/product-grid";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { getProduct, getProducts } from "@/lib/api/catalog";
 import type { Product } from "@/lib/api/types";
 import { formatPrice, imageSrc } from "@/lib/format";
+import { absoluteUrl, breadcrumbJsonLd, openGraph, truncate } from "@/lib/seo";
 
 const LOW_STOCK = 5;
 
@@ -24,18 +26,23 @@ async function loadProduct(params: PageProps<"/products/[id]">["params"]): Promi
 
 export async function generateMetadata({ params }: PageProps<"/products/[id]">): Promise<Metadata> {
   const product = await loadProduct(params);
-  if (!product) return { title: "Prodotto non trovato" };
+  if (!product) return { title: "Prodotto non trovato", robots: { index: false } };
 
   const cover = product.images[0];
+  const description = truncate(
+    `${product.brand} ${product.name}: ${product.description} Scopri prezzo e disponibilità su PioCart.`,
+  );
   return {
     title: product.name,
-    description: product.description,
+    description,
     alternates: { canonical: `/products/${product.id}` },
-    openGraph: {
+    openGraph: openGraph({
       title: product.name,
-      description: product.description,
-      images: cover ? [{ url: imageSrc(cover.id), alt: product.name }] : undefined,
-    },
+      description,
+      url: `/products/${product.id}`,
+      // Without photos the page keeps the site's card
+      ...(cover && { images: [{ url: imageSrc(cover.id), alt: product.name }] }),
+    }),
   };
 }
 
@@ -45,31 +52,38 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
 
   const related = await getProducts({ category: product.category.name, size: 5 });
   const others = related.content.filter((p) => p.id !== product.id).slice(0, 4);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const url = absoluteUrl(`/products/${product.id}`);
+  const categoryPath = `/categories/${encodeURIComponent(product.category.name)}`;
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
     description: product.description,
+    sku: String(product.id),
+    url,
     brand: { "@type": "Brand", name: product.brand },
     category: product.category.name,
-    image: product.images.map((image) => `${siteUrl}${imageSrc(image.id)}`),
+    image: product.images.length ? product.images.map((image) => absoluteUrl(imageSrc(image.id))) : undefined,
     offers: {
       "@type": "Offer",
       price: product.price,
       priceCurrency: "EUR",
       availability: `https://schema.org/${product.inventory > 0 ? "InStock" : "OutOfStock"}`,
-      url: `${siteUrl}/products/${product.id}`,
+      itemCondition: "https://schema.org/NewCondition",
+      url,
     },
   };
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-10">
-      <script
-        type="application/ld+json"
-        // JSON.stringify output is safe here once "<" is escaped.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      <JsonLd data={jsonLd} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Catalogo", path: "/products" },
+          { name: product.category.name, path: categoryPath },
+          { name: product.name, path: `/products/${product.id}` },
+        ])}
       />
 
       <nav aria-label="Percorso" className="text-sm text-muted-foreground">
@@ -77,7 +91,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
           Catalogo
         </Link>{" "}
         /{" "}
-        <Link href={`/categories/${encodeURIComponent(product.category.name)}`} className="hover:text-foreground">
+        <Link href={categoryPath} className="hover:text-foreground">
           {product.category.name}
         </Link>{" "}
         / <span className="text-foreground">{product.name}</span>

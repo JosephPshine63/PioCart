@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getCategories, getProducts } from "@/lib/api/catalog";
+import { SITE_URL } from "@/lib/site";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-
+// No lastModified: the backend exposes no dates, and a made-up one is worse than none.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, categories] = await Promise.all([getProducts({ size: 1000 }), getCategories()]);
   return [
@@ -18,5 +18,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.7,
     })),
+    { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.5 },
   ];
 }

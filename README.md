@@ -4,6 +4,8 @@ Pio-Cart è una piattaforma di e-commerce composta da due parti:
 - un backend REST in **Java 17** e **Spring Boot 3** che gestisce prodotti, categorie, immagini, carrelli, ordini e utenti;
 - uno storefront in **Next.js 16** (cartella `frontend/`), descritto in `frontend/README.md`.
 
+È un progetto dimostrativo da portfolio, online su https://pio-cart-psi.vercel.app. I pagamenti usano Stripe in modalità test.
+
 ## 🚀 Obiettivi del Progetto
 
 - Catalogo con ricerca, filtri per categoria e marca, ordinamento e paginazione.
@@ -158,3 +160,7 @@ Secret del repository da configurare su GitHub (Settings → Secrets and variabl
 ### Frontend su Vercel
 
 Vedi `frontend/README.md`.
+
+## 👤 Autore
+
+**Giuseppe Pio Ruocco** — [GitHub](https://github.com/JosephPshine63) · [LinkedIn](https://www.linkedin.com/in/giuseppe-pio-ruocco-7b4367267/) · [Portfolio](https://josephpshine63.github.io/portfolio/) · dev.pioruocco@gmail.com

@@ -1,8 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CartSheetProvider } from "@/components/cart/cart-sheet-context";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { DEVELOPER, PORTFOLIO_URL } from "@/lib/contacts";
+import { openGraph } from "@/lib/seo";
+import { isIndexable, SITE_DESCRIPTION, SITE_NAME, SITE_URL, THEME_COLORS } from "@/lib/site";
 import { themeScript } from "@/lib/theme";
 import "./globals.css";
 
@@ -17,12 +20,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
   title: {
-    default: "PioCart",
-    template: "%s | PioCart",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: "Elettronica, libri e articoli per la casa dai migliori marchi.",
+  description: SITE_DESCRIPTION,
+  authors: [{ name: DEVELOPER.name, url: PORTFOLIO_URL }],
+  creator: DEVELOPER.name,
+  openGraph: openGraph(),
+  twitter: { card: "summary_large_image" },
+  robots: isIndexable ? undefined : { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
