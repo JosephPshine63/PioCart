@@ -44,10 +44,11 @@ npm run lint    # ESLint
 
 - `app/` – pagine, Server Actions (`app/actions`) e proxy delle immagini (`app/api/images/[id]`)
 - `app/(auth)/login`, `app/(auth)/register` – accesso e registrazione con Server Actions (`app/actions/auth.ts`), validazione zod (`lib/auth-schema.ts`) e ritorno alla pagina di partenza con `returnTo`
+- `app/cart`, `components/cart/` – carrello a scomparsa nell'header e pagina `/cart`, con Server Actions (`app/actions/cart.ts`) e aggiornamenti ottimistici; chi non è autenticato viene mandato al login e poi riportato alla pagina di partenza
 - `app/products`, `app/categories/[name]` – catalogo con filtri, ordinamento e paginazione nei `searchParams`, pagina prodotto
 - `components/` – header, footer, griglia e vista catalogo, galleria prodotto e componenti shadcn/ui (`components/ui`)
 - `lib/api/` – client HTTP verso il backend, tipi dei DTO e funzioni del catalogo con cache
 - `lib/catalog-params.ts` – lettura e costruzione degli URL del catalogo (filtri, ordinamento, pagina)
 - `public/brand/`, `app/icon.png` – logo e icona dell'app
 - `lib/auth.ts`, `lib/session.ts` – cookie del token, utente corrente e carrello
-- `proxy.ts` – protegge `/account`, `/checkout` e `/admin` reindirizzando al login
+- `proxy.ts` – protegge `/cart`, `/account`, `/checkout` e `/admin` reindirizzando al login

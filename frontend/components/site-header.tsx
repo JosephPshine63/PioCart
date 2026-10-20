@@ -2,9 +2,9 @@ import { Suspense } from "react";
 import Form from "next/form";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, ShoppingBag, User as UserIcon } from "lucide-react";
+import { Search, User as UserIcon } from "lucide-react";
 import { logout } from "@/app/actions/auth";
-import { Badge } from "@/components/ui/badge";
+import { CartIconButton, CartSheet } from "@/components/cart/cart-sheet";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -50,7 +50,7 @@ export async function SiteHeader() {
         </Form>
 
         <div className="flex items-center gap-1">
-          <Suspense fallback={<CartButton count={0} />}>
+          <Suspense fallback={<CartIconButton count={0} href="/cart" />}>
             <CartLink />
           </Suspense>
           <Suspense fallback={<AccountButton />}>
@@ -64,21 +64,9 @@ export async function SiteHeader() {
 
 async function CartLink() {
   const cart = await getCart();
-  const count = cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
-  return <CartButton count={count} />;
-}
-
-function CartButton({ count }: { count: number }) {
-  return (
-    <Button variant="ghost" size="icon-lg" asChild className="relative">
-      <Link href="/cart" aria-label={`Carrello, ${count} articoli`}>
-        <ShoppingBag className="size-5" />
-        {count > 0 && (
-          <Badge className="absolute -right-1 -top-1 h-5 min-w-5 px-1 tabular-nums">{count}</Badge>
-        )}
-      </Link>
-    </Button>
-  );
+  if (cart) return <CartSheet cart={cart} />;
+  // Signed out: /cart is protected, so this goes through the login and back.
+  return <CartIconButton count={0} href="/cart" />;
 }
 
 function AccountButton() {

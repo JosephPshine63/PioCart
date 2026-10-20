@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ShoppingBag } from "lucide-react";
+import { AddToCart } from "@/components/cart/add-to-cart";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductGrid } from "@/components/product-grid";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getProduct, getProducts } from "@/lib/api/catalog";
 import type { Product } from "@/lib/api/types";
@@ -101,13 +100,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
 
           <Availability inventory={product.inventory} />
 
-          <div className="flex flex-col gap-2">
-            {/* Wired to the cart in the cart phase. */}
-            <Button size="lg" disabled className="w-full sm:w-fit">
-              <ShoppingBag />
-              {product.inventory > 0 ? "Aggiungi al carrello" : "Non disponibile"}
-            </Button>
-          </div>
+          <AddToCart productId={product.id} productName={product.name} inventory={product.inventory} />
 
           <Separator />
 
