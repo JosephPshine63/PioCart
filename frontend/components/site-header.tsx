@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, User as UserIcon } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { CartIconButton, CartSheet } from "@/components/cart/cart-sheet";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -50,6 +51,7 @@ export async function SiteHeader() {
         </Form>
 
         <div className="flex items-center gap-1">
+          <ThemeToggle />
           <Suspense fallback={<CartIconButton count={0} href="/cart" />}>
             <CartLink />
           </Suspense>

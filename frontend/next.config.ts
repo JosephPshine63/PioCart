@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
+  agentRules: false,
   partialPrefetching: true,
   experimental: {
     // Product images are uploaded one per Server Action call (the backend accepts up to 5MB per file).
