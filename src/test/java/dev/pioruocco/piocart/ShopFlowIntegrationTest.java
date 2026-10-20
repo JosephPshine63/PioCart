@@ -172,7 +172,9 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(get("/api/v1/orders/me").with(bearer(token)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value(orderId));
+                .andExpect(jsonPath("$.data[0].id").value(orderId))
+                .andExpect(jsonPath("$.data[0].paidAt").isNotEmpty())
+                .andExpect(jsonPath("$.data[0].items[0].productName").value("Notebook"));
         mockMvc.perform(get("/api/v1/orders/{orderId}/order", orderId).with(bearer(token)))
                 .andExpect(status().isOk());
 
@@ -223,6 +225,9 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
                 .isEqualTo(OrderStatus.CANCELLED);
         assertThat(productRepository.findById(product.getId()).orElseThrow().getInventory()).isEqualTo(1);
         verify(paymentService).refundSession(sessionId);
+        // it was paid, so the customer still sees it in the history
+        mockMvc.perform(get("/api/v1/orders/me").with(bearer(token)))
+                .andExpect(jsonPath("$.data[0].status").value("CANCELLED"));
     }
 
     @Test
@@ -242,6 +247,10 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
                 .isEqualTo(OrderStatus.PENDING);
         mockMvc.perform(post("/api/v1/orders/confirm").with(bearer(token)).param("sessionId", first))
                 .andExpect(status().isPaymentRequired());
+        // neither the abandoned nor the still unpaid checkout is part of the order history
+        mockMvc.perform(get("/api/v1/orders/me").with(bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isEmpty());
     }
 
     @Test

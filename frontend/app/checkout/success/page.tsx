@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, ApiError } from "@/lib/api/client";
 import type { Order } from "@/lib/api/types";
-import { formatPrice } from "@/lib/format";
+import { formatDate, formatPrice } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Ordine confermato",
@@ -50,8 +50,7 @@ async function OrderLoader({ searchParams }: Pick<PageProps<"/checkout/success">
         </span>
         <CardTitle className="text-2xl">Grazie per il tuo ordine!</CardTitle>
         <CardDescription>
-          Il pagamento è andato a buon fine. Ordine n. {order.id} del{" "}
-          {new Date(`${order.orderDate}T00:00:00`).toLocaleDateString("it-IT", { dateStyle: "long" })}.
+          Il pagamento è andato a buon fine. Ordine n. {order.id} del {formatDate(order.orderDate)}.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 text-sm">
@@ -74,7 +73,10 @@ async function OrderLoader({ searchParams }: Pick<PageProps<"/checkout/success">
           <span className="tabular-nums">{formatPrice(order.totalAmount)}</span>
         </div>
       </CardContent>
-      <CardFooter className="justify-center">
+      <CardFooter className="flex-wrap justify-center gap-2">
+        <Button asChild size="lg" variant="outline">
+          <Link href={`/account/orders/${order.id}`}>Vedi l&apos;ordine</Link>
+        </Button>
         <Button asChild size="lg">
           <Link href="/products">Continua lo shopping</Link>
         </Button>

@@ -1,12 +1,9 @@
 "use client";
 
-import { useActionState, type ComponentProps, type ReactNode } from "react";
+import { useActionState } from "react";
 import Link from "next/link";
-import { CircleAlert, LoaderCircle } from "lucide-react";
 import { login, register } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FormMessage, SubmitButton } from "@/components/form-fields";
 import type { LoginState, RegisterState } from "@/lib/auth-schema";
 
 export function LoginForm({ returnTo }: { returnTo: string }) {
@@ -52,7 +49,7 @@ export function RegisterForm({ returnTo }: { returnTo: string }) {
     <form action={action} className="grid gap-4" noValidate>
       <input type="hidden" name="returnTo" value={returnTo} />
       <FormMessage message={state.message} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
         <Field
           label="Nome"
           name="firstName"
@@ -112,59 +109,4 @@ export function RegisterForm({ returnTo }: { returnTo: string }) {
 
 function withReturnTo(path: string, returnTo: string) {
   return returnTo === "/" ? path : `${path}?returnTo=${encodeURIComponent(returnTo)}`;
-}
-
-type FieldProps = ComponentProps<"input"> & {
-  label: string;
-  name: string;
-  description?: string;
-  errors?: string[];
-};
-
-function Field({ label, name, description, errors, ...props }: FieldProps) {
-  const id = `field-${name}`;
-  const error = errors?.[0];
-  const describedBy = [description && `${id}-description`, error && `${id}-error`].filter(Boolean).join(" ");
-
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        name={name}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy || undefined}
-        {...props}
-      />
-      {description && !error && (
-        <p id={`${id}-description`} className="text-xs text-muted-foreground">
-          {description}
-        </p>
-      )}
-      {error && (
-        <p id={`${id}-error`} className="text-xs text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function FormMessage({ message }: { message?: string }) {
-  if (!message) return null;
-  return (
-    <div role="alert" className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-      <CircleAlert className="mt-0.5 size-4 shrink-0" />
-      {message}
-    </div>
-  );
-}
-
-function SubmitButton({ pending, children }: { pending: boolean; children: ReactNode }) {
-  return (
-    <Button type="submit" size="lg" disabled={pending} className="w-full">
-      {pending && <LoaderCircle className="size-4 animate-spin" />}
-      {children}
-    </Button>
-  );
 }

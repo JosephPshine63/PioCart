@@ -56,6 +56,8 @@ export interface Cart {
 export interface OrderItem {
   productId: number;
   productName: string;
+  /** First image of the product, if it has any. */
+  imageId: number | null;
   quantity: number;
   price: number;
 }
@@ -65,6 +67,8 @@ export interface Order {
   userId: number;
   /** ISO date (yyyy-MM-dd) */
   orderDate: string;
+  /** ISO local date-time of the verified payment; null while the checkout is unpaid. */
+  paidAt: string | null;
   totalAmount: number;
   status: OrderStatus;
   items: OrderItem[];

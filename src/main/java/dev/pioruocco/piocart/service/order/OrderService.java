@@ -10,7 +10,9 @@ import dev.pioruocco.piocart.exceptions.ResourceNotFoundException;
 import dev.pioruocco.piocart.model.Cart;
 import dev.pioruocco.piocart.model.Order;
 import dev.pioruocco.piocart.model.OrderItem;
+import dev.pioruocco.piocart.model.Image;
 import dev.pioruocco.piocart.model.Product;
+import dev.pioruocco.piocart.repository.ImageRepository;
 import dev.pioruocco.piocart.repository.OrderRepository;
 import dev.pioruocco.piocart.response.CheckoutResponse;
 import dev.pioruocco.piocart.service.cart.ICartService;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +37,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
+    private final ImageRepository imageRepository;
     private final ICartService cartService;
     private final IPaymentService paymentService;
     private final EntityManager entityManager;
@@ -108,6 +112,7 @@ public class OrderService implements IOrderService {
                 || !paymentService.getCurrency().equalsIgnoreCase(session.currency())) {
             throw new PaymentFailedException("The payment was not completed");
         }
+        order.setPaidAt(LocalDateTime.now());
 
         // Lock the products (in id order, against deadlocks) so concurrent orders can't oversell
         List<Product> products = order.getOrderItems().stream()
@@ -181,11 +186,10 @@ public class OrderService implements IOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
+    // Only paid orders: checkouts that were abandoned before paying aren't part of the history
     @Override
     public List<OrderDto> getUserOrders(Long userId) {
-        List<Order> orders = orderRepository.findByUserId(userId);
-        return  orders.stream()
-                .sorted(Comparator.comparing(Order::getOrderId).reversed())
+        return orderRepository.findByUserIdAndPaidAtIsNotNullOrderByOrderIdDesc(userId).stream()
                 .map(this :: convertToDto)
                 .toList();
     }
@@ -196,16 +200,22 @@ public class OrderService implements IOrderService {
         orderDto.setId(order.getOrderId());
         orderDto.setUserId(order.getUser() != null ? order.getUser().getId() : null);
         orderDto.setOrderDate(order.getOrderDate());
+        orderDto.setPaidAt(order.getPaidAt());
         orderDto.setTotalAmount(order.getTotalAmount());
         orderDto.setStatus(order.getOrderStatus().name());
-        orderDto.setItems(order.getOrderItems().stream().map(item -> {
-            OrderItemDto itemDto = new OrderItemDto();
-            itemDto.setProductId(item.getProduct().getId());
-            itemDto.setProductName(item.getProduct().getName());
-            itemDto.setQuantity(item.getQuantity());
-            itemDto.setPrice(item.getPrice());
-            return itemDto;
-        }).toList());
+        orderDto.setItems(order.getOrderItems().stream()
+                .sorted(Comparator.comparing((OrderItem item) -> item.getProduct().getName()))
+                .map(item -> {
+                    OrderItemDto itemDto = new OrderItemDto();
+                    itemDto.setProductId(item.getProduct().getId());
+                    itemDto.setProductName(item.getProduct().getName());
+                    itemDto.setImageId(imageRepository.findFirstByProductIdOrderByIdAsc(item.getProduct().getId())
+                            .map(Image::getId)
+                            .orElse(null));
+                    itemDto.setQuantity(item.getQuantity());
+                    itemDto.setPrice(item.getPrice());
+                    return itemDto;
+                }).toList());
         return orderDto;
     }
 }

@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
-  List<Order> findByUserId(Long userId);
+  List<Order> findByUserIdAndPaidAtIsNotNullOrderByOrderIdDesc(Long userId);
   List<Order> findByUserIdAndOrderStatus(Long userId, OrderStatus orderStatus);
 
   // Locked so that two confirmations of the same payment can't both fulfil the order

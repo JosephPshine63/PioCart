@@ -29,7 +29,7 @@ Il progetto gestisce diverse entità cruciali per lo shop:
 - **Product & Category**: Gestione dell'inventario. Ogni prodotto appartiene ad una determinata categoria.
 - **Image**: Sistema per la gestione e l'upload delle immagini dei prodotti, le cui informazioni sono salvate a database e recuperabili tramite apposito endpoint.
 - **Cart & CartItem**: Carrello della spesa interattivo. L'utente può aggiungere prodotti (CartItem), aggiornarne la quantita ed eliminarli.
-- **Order & OrderItem**: Elaborazione del checkout. Permette di tracciare lo stato dell'ordine e di mantenere una "fotografia" del prezzo e dell'articolo al momento in cui l'utente ha completato l'acquisto. Il pagamento passa da **Stripe Checkout**: `POST /orders/checkout` crea l'ordine `PENDING` e la pagina di pagamento, `POST /orders/confirm?sessionId=...` verifica con Stripe che sia stato pagato l'importo giusto, scala le giacenze, svuota il carrello e porta l'ordine in `PROCESSING`.
+- **Order & OrderItem**: Elaborazione del checkout. Permette di tracciare lo stato dell'ordine e di mantenere una "fotografia" del prezzo e dell'articolo al momento in cui l'utente ha completato l'acquisto. Il pagamento passa da **Stripe Checkout**: `POST /orders/checkout` crea l'ordine `PENDING` e la pagina di pagamento, `POST /orders/confirm?sessionId=...` verifica con Stripe che sia stato pagato l'importo giusto, scala le giacenze, svuota il carrello e porta l'ordine in `PROCESSING`. `GET /orders/me` restituisce lo storico dei soli ordini pagati, senza i checkout abbandonati.
 - **User**: Gestione dell'anagrafica degli utenti della piattaforma. Interagisce direttamente con il Carrello di sua proprietà.
 
 ## ⚙️ Setup ed Esecuzione Locale

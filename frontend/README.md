@@ -46,6 +46,7 @@ npm run lint    # ESLint
 - `app/(auth)/login`, `app/(auth)/register` – accesso e registrazione con Server Actions (`app/actions/auth.ts`), validazione zod (`lib/auth-schema.ts`) e ritorno alla pagina di partenza con `returnTo`
 - `app/cart`, `components/cart/` – carrello a scomparsa nell'header e pagina `/cart`, con Server Actions (`app/actions/cart.ts`) e aggiornamenti ottimistici; chi non è autenticato viene mandato al login e poi riportato alla pagina di partenza
 - `app/checkout`, `components/checkout/` – riepilogo e avvio del pagamento con Stripe Checkout (`app/actions/checkout.ts`); `app/checkout/confirm` riceve il ritorno da Stripe, fa confermare l'ordine al backend e reindirizza a `/checkout/success` oppure di nuovo a `/checkout` con un avviso. Con `STRIPE_TEST_MODE=true` viene mostrata la carta di test
+- `app/account`, `components/account/` – area account: profilo con modifica di nome e cognome (`app/actions/account.ts`), storico degli ordini pagati (`/account/orders`) e dettaglio dell'ordine con stato (`/account/orders/[id]`)
 - `app/products`, `app/categories/[name]` – catalogo con filtri, ordinamento e paginazione nei `searchParams`, pagina prodotto
 - `components/` – header, footer, griglia e vista catalogo, galleria prodotto e componenti shadcn/ui (`components/ui`)
 - `lib/api/` – client HTTP verso il backend, tipi dei DTO e funzioni del catalogo con cache
