@@ -48,6 +48,8 @@ public class SecurityConfig {
                         .requestMatchers(catalog).hasRole("ADMIN")
                         .requestMatchers(api + "/users/me").authenticated()
                         .requestMatchers(api + "/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, api + "/orders").hasRole("ADMIN")
+                        .requestMatchers(api + "/orders/*/status").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, e) ->

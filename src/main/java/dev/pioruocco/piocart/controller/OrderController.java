@@ -1,12 +1,17 @@
 package dev.pioruocco.piocart.controller;
 
 import dev.pioruocco.piocart.dto.OrderDto;
+import dev.pioruocco.piocart.enums.OrderStatus;
 import dev.pioruocco.piocart.model.Order;
 import dev.pioruocco.piocart.response.ApiResponse;
 import dev.pioruocco.piocart.response.CheckoutResponse;
+import dev.pioruocco.piocart.response.PageResponse;
 import dev.pioruocco.piocart.security.ShopUserDetails;
 import dev.pioruocco.piocart.service.order.IOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -46,5 +51,19 @@ public class OrderController {
     public ResponseEntity<ApiResponse> getMyOrders(@AuthenticationPrincipal ShopUserDetails user) {
         List<OrderDto> orders = orderService.getUserOrders(user.getId());
         return ResponseEntity.ok(new ApiResponse("Item Order Success!", orders));
+    }
+
+    // Admin only (see SecurityConfig): every paid order, optionally filtered by status
+    @GetMapping
+    public ResponseEntity<ApiResponse> getPaidOrders(@RequestParam(required = false) OrderStatus status,
+                                                     @PageableDefault(size = 20, sort = "orderId", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<OrderDto> orders = orderService.getPaidOrders(status, pageable);
+        return ResponseEntity.ok(new ApiResponse("success", orders));
+    }
+
+    @PutMapping("/{orderId}/status")
+    public ResponseEntity<ApiResponse> updateStatus(@PathVariable Long orderId, @RequestParam OrderStatus status) {
+        Order order = orderService.updateStatus(orderId, status);
+        return ResponseEntity.ok(new ApiResponse("Order status updated", orderService.convertToDto(order)));
     }
 }

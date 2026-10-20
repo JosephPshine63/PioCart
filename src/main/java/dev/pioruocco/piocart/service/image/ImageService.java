@@ -54,6 +54,10 @@ public class ImageService implements IImageService {
     @Override
     public List<ImageDto> saveImages( Long productId,   List<MultipartFile> files) {
         Product product = productService.getProductById(productId);
+        if (files.isEmpty()) {
+            throw new IllegalArgumentException("No files to upload");
+        }
+        files.forEach(this::requireImage);
 
         List<ImageDto> savedImageDto = new ArrayList<>();
         for (MultipartFile file : files) {
@@ -90,6 +94,7 @@ public class ImageService implements IImageService {
     @Override
     public void updateImage(MultipartFile file, Long imageId) {
         Image image = getImageById(imageId);
+        requireImage(file);
         try {
             image.setFileName(file.getOriginalFilename());
             image.setFileType(file.getContentType());
@@ -99,5 +104,13 @@ public class ImageService implements IImageService {
             throw new RuntimeException(e.getMessage());
         }
 
+    }
+
+    // The type is served back as the image's Content-Type, so only images are accepted
+    private void requireImage(MultipartFile file) {
+        String type = file.getContentType();
+        if (file.isEmpty() || type == null || !type.startsWith("image/") || type.contains("svg")) {
+            throw new IllegalArgumentException("Only image files are allowed");
+        }
     }
 }

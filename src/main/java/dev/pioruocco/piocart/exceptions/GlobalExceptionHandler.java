@@ -33,8 +33,8 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, e.getMessage());
     }
 
-    @ExceptionHandler(InsufficientStockException.class)
-    public ResponseEntity<ApiResponse> handleInsufficientStock(InsufficientStockException e) {
+    @ExceptionHandler({InsufficientStockException.class, ResourceInUseException.class, InvalidOrderStatusException.class})
+    public ResponseEntity<ApiResponse> handleStateConflict(RuntimeException e) {
         return build(HttpStatus.CONFLICT, e.getMessage());
     }
 

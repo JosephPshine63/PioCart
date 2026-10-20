@@ -14,13 +14,16 @@ export async function getMyOrders(): Promise<Order[]> {
   }
 }
 
-/** One of the signed-in user's orders, or null if it doesn't exist or belongs to someone else. */
-export async function getMyOrder(orderId: number): Promise<Order | null> {
+/**
+ * One of the signed-in user's orders (any order for an admin), or null if it doesn't exist or belongs to someone
+ * else. `returnTo` is where to come back after logging in again.
+ */
+export async function getOrder(orderId: number, returnTo: string): Promise<Order | null> {
   try {
     return await api<Order>(`/orders/${orderId}/order`, { auth: true, cache: "no-store" });
   } catch (error) {
     if (error instanceof ApiError) {
-      if (error.status === 401) redirect(`/login?returnTo=${encodeURIComponent(`/account/orders/${orderId}`)}`);
+      if (error.status === 401) redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
       if (error.status === 404) return null;
     }
     throw error;

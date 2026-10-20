@@ -1,11 +1,13 @@
 package dev.pioruocco.piocart.service.category;
 
 import dev.pioruocco.piocart.exceptions.AlreadyExistsException;
+import dev.pioruocco.piocart.exceptions.ResourceInUseException;
 import dev.pioruocco.piocart.exceptions.ResourceNotFoundException;
 import dev.pioruocco.piocart.model.Category;
 import dev.pioruocco.piocart.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,26 +36,42 @@ public class CategoryService implements ICategoryService {
 
     @Override
     public Category addCategory(Category category) {
-        return  Optional.of(category).filter(c -> !categoryRepository.existsByName(c.getName()))
-                .map(categoryRepository :: save)
-                .orElseThrow(() -> new AlreadyExistsException(category.getName()+" already exists"));
+        String name = validName(category.getName());
+        if (categoryRepository.existsByName(name)) {
+            throw new AlreadyExistsException(name + " already exists");
+        }
+        return categoryRepository.save(new Category(name));
     }
 
     @Override
     public Category updateCategory(Category category, Long id) {
-        return Optional.ofNullable(getCategoryById(id)).map(oldCategory -> {
-            oldCategory.setName(category.getName());
-            return categoryRepository.save(oldCategory);
-        }) .orElseThrow(()-> new ResourceNotFoundException("Category not found!"));
+        Category oldCategory = getCategoryById(id);
+        String name = validName(category.getName());
+        Category sameName = categoryRepository.findByName(name);
+        if (sameName != null && !sameName.getId().equals(id)) {
+            throw new AlreadyExistsException(name + " already exists");
+        }
+        oldCategory.setName(name);
+        return categoryRepository.save(oldCategory);
     }
 
-
+    @Transactional
     @Override
     public void deleteCategoryById(Long id) {
-        categoryRepository.findById(id)
-                .ifPresentOrElse(categoryRepository::delete, () -> {
-                    throw new ResourceNotFoundException("Category not found!");
-                });
+        Category category = getCategoryById(id);
+        if (!category.getProducts().isEmpty()) {
+            throw new ResourceInUseException("The category still has products: move or delete them first");
+        }
+        categoryRepository.delete(category);
+    }
 
+    private String validName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("The category name is required");
+        }
+        if (name.trim().length() > 255) {
+            throw new IllegalArgumentException("The category name is too long");
+        }
+        return name.trim();
     }
 }

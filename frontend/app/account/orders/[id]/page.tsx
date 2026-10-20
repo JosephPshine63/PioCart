@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { OrderStatus } from "@/lib/api/types";
 import { formatDate, formatDateTime, formatPrice } from "@/lib/format";
-import { getMyOrder, orderItemCount } from "@/lib/orders";
+import { getOrder, orderItemCount } from "@/lib/orders";
 
 export async function generateMetadata({ params }: PageProps<"/account/orders/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -46,7 +46,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/account/orders/[id]">, "
   const orderId = Number(id);
   if (!Number.isSafeInteger(orderId) || orderId <= 0) notFound();
 
-  const order = await getMyOrder(orderId);
+  const order = await getOrder(orderId, `/account/orders/${orderId}`);
   if (!order) notFound();
   const count = orderItemCount(order);
   const note = STATUS_NOTES[order.status];

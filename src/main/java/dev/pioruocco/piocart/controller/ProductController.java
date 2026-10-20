@@ -7,6 +7,7 @@ import dev.pioruocco.piocart.request.ProductUpdateRequest;
 import dev.pioruocco.piocart.response.ApiResponse;
 import dev.pioruocco.piocart.response.PageResponse;
 import dev.pioruocco.piocart.service.product.IProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -51,14 +52,14 @@ public class ProductController {
     }
 
     @PostMapping("/add")
-    public ResponseEntity<ApiResponse> addProduct(@RequestBody AddProductRequest product) {
+    public ResponseEntity<ApiResponse> addProduct(@Valid @RequestBody AddProductRequest product) {
         Product theProduct = productService.addProduct(product);
         ProductDto productDto = productService.convertToDto(theProduct);
         return ResponseEntity.ok(new ApiResponse("Add product success!", productDto));
     }
 
     @PutMapping("/product/{productId}/update")
-    public  ResponseEntity<ApiResponse> updateProduct(@RequestBody ProductUpdateRequest request, @PathVariable Long productId) {
+    public  ResponseEntity<ApiResponse> updateProduct(@Valid @RequestBody ProductUpdateRequest request, @PathVariable Long productId) {
         Product theProduct = productService.updateProduct(request, productId);
         ProductDto productDto = productService.convertToDto(theProduct);
         return ResponseEntity.ok(new ApiResponse("Update product success!", productDto));

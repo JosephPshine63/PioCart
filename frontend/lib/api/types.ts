@@ -65,6 +65,8 @@ export interface OrderItem {
 export interface Order {
   id: number;
   userId: number;
+  customerName: string;
+  customerEmail: string;
   /** ISO date (yyyy-MM-dd) */
   orderDate: string;
   /** ISO local date-time of the verified payment; null while the checkout is unpaid. */

@@ -3,6 +3,7 @@ import { CircleAlert, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type FieldProps = ComponentProps<"input"> & {
@@ -13,6 +14,32 @@ type FieldProps = ComponentProps<"input"> & {
 };
 
 export function Field({ label, name, description, errors, ...props }: FieldProps) {
+  return (
+    <FieldShell label={label} name={name} description={description} errors={errors}>
+      {(control) => <Input name={name} {...control} {...props} />}
+    </FieldShell>
+  );
+}
+
+type TextareaFieldProps = ComponentProps<"textarea"> & Omit<FieldProps, keyof ComponentProps<"input">> & { name: string };
+
+export function TextareaField({ label, name, description, errors, ...props }: TextareaFieldProps) {
+  return (
+    <FieldShell label={label} name={name} description={description} errors={errors}>
+      {(control) => <Textarea name={name} {...control} {...props} />}
+    </FieldShell>
+  );
+}
+
+type ControlProps = { id: string; "aria-invalid"?: true; "aria-describedby"?: string };
+
+function FieldShell({
+  label,
+  name,
+  description,
+  errors,
+  children,
+}: Pick<FieldProps, "label" | "name" | "description" | "errors"> & { children: (control: ControlProps) => ReactNode }) {
   const id = `field-${name}`;
   const error = errors?.[0];
   const describedBy = [description && `${id}-description`, error && `${id}-error`].filter(Boolean).join(" ");
@@ -20,13 +47,7 @@ export function Field({ label, name, description, errors, ...props }: FieldProps
   return (
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        name={name}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy || undefined}
-        {...props}
-      />
+      {children({ id, "aria-invalid": error ? true : undefined, "aria-describedby": describedBy || undefined })}
       {description && !error && (
         <p id={`${id}-description`} className="text-xs text-muted-foreground">
           {description}

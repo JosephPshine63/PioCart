@@ -267,6 +267,66 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.data").isEmpty());
     }
 
+    @Test
+    void adminMovesPaidOrdersThroughTheirStatuses() throws Exception {
+        Product product = newProduct("Chair", "Acme", 5);
+        String token = registerUser();
+        long orderId = paidOrder(token, product, 2);
+        String admin = adminToken();
+
+        mockMvc.perform(get("/api/v1/orders").with(bearer(token)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/v1/orders/{id}/status", orderId).with(bearer(token)).param("status", "SHIPPED"))
+                .andExpect(status().isForbidden());
+
+        JsonNode page = data(mockMvc.perform(get("/api/v1/orders").with(bearer(admin)).param("status", "PROCESSING"))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(page.get("content").findValuesAsText("id")).contains(String.valueOf(orderId));
+        assertThat(page.get("content").get(0).get("customerEmail").asText()).contains("@example.com");
+
+        // an unpaid checkout is not part of the admin list either
+        addToCart(token, product, 1);
+        long pendingId = data(mockMvc.perform(post("/api/v1/orders/checkout").with(bearer(token)))
+                .andReturn()).get("orderId").asLong();
+        assertThat(data(mockMvc.perform(get("/api/v1/orders").with(bearer(admin)).param("size", "100"))
+                .andReturn()).get("content").findValuesAsText("id")).doesNotContain(String.valueOf(pendingId));
+        mockMvc.perform(put("/api/v1/orders/{id}/status", pendingId).with(bearer(admin)).param("status", "SHIPPED"))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(put("/api/v1/orders/{id}/status", orderId).with(bearer(admin)).param("status", "DELIVERED"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(put("/api/v1/orders/{id}/status", orderId).with(bearer(admin)).param("status", "SHIPPED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SHIPPED"));
+        mockMvc.perform(put("/api/v1/orders/{id}/status", orderId).with(bearer(admin)).param("status", "CANCELLED"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(put("/api/v1/orders/{id}/status", orderId).with(bearer(admin)).param("status", "DELIVERED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("DELIVERED"));
+        mockMvc.perform(put("/api/v1/orders/{id}/status", orderId).with(bearer(admin)).param("status", "NOPE"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void cancellingAPaidOrderRefundsAndRestocks() throws Exception {
+        Product product = newProduct("Sofa", "Acme", 5);
+        String token = registerUser();
+        long orderId = paidOrder(token, product, 3);
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getInventory()).isEqualTo(2);
+
+        mockMvc.perform(put("/api/v1/orders/{id}/status", orderId).with(bearer(adminToken())).param("status", "CANCELLED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
+
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getInventory()).isEqualTo(5);
+        verify(paymentService).refundSession(orderRepository.findById(orderId).orElseThrow().getPaymentSessionId());
+
+        // an ordered product can't be deleted, its order lines still point at it
+        mockMvc.perform(delete("/api/v1/products/product/{id}/delete", product.getId()).with(bearer(adminToken())))
+                .andExpect(status().isConflict());
+    }
+
     @BeforeEach
     void stubPaymentProvider() {
         when(paymentService.getCurrency()).thenReturn("eur");
@@ -294,6 +354,16 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
                         .param("productId", product.getId().toString())
                         .param("quantity", String.valueOf(quantity)))
                 .andExpect(status().isOk());
+    }
+
+    // Checks out the product and confirms the payment, returning the PROCESSING order's id
+    private long paidOrder(String token, Product product, int quantity) throws Exception {
+        addToCart(token, product, quantity);
+        String sessionId = checkoutSessionId(token);
+        stubSession(sessionId, true, product.getPrice().multiply(BigDecimal.valueOf(quantity)).movePointRight(2).longValue());
+        return data(mockMvc.perform(post("/api/v1/orders/confirm").with(bearer(token)).param("sessionId", sessionId))
+                .andExpect(status().isOk())
+                .andReturn()).get("id").asLong();
     }
 
     private String checkoutSessionId(String token) throws Exception {

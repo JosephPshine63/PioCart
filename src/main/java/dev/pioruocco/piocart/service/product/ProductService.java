@@ -2,12 +2,15 @@ package dev.pioruocco.piocart.service.product;
 
 import dev.pioruocco.piocart.dto.ImageDto;
 import dev.pioruocco.piocart.dto.ProductDto;
+import dev.pioruocco.piocart.exceptions.ResourceInUseException;
 import dev.pioruocco.piocart.exceptions.ResourceNotFoundException;
 import dev.pioruocco.piocart.model.Category;
 import dev.pioruocco.piocart.model.Image;
 import dev.pioruocco.piocart.model.Product;
+import dev.pioruocco.piocart.repository.CartItemRepository;
 import dev.pioruocco.piocart.repository.CategoryRepository;
 import dev.pioruocco.piocart.repository.ImageRepository;
+import dev.pioruocco.piocart.repository.OrderItemRepository;
 import dev.pioruocco.piocart.repository.ProductRepository;
 import dev.pioruocco.piocart.repository.ProductSpecifications;
 import dev.pioruocco.piocart.request.AddProductRequest;
@@ -17,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +32,8 @@ public class ProductService implements IProductService {
     private final CategoryRepository categoryRepository;
     private final ModelMapper modelMapper;
     private final ImageRepository imageRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final CartItemRepository cartItemRepository;
 
     @Override
     public Product addProduct(AddProductRequest request) {
@@ -37,13 +43,16 @@ public class ProductService implements IProductService {
         // The set as the new product category.
 
         Category category = findOrCreateCategory(request.getCategory().getName());
-        request.setCategory(category);
         return productRepository.save(createProduct(request, category));
     }
 
     private Category findOrCreateCategory(String name) {
-        return Optional.ofNullable(categoryRepository.findByName(name))
-                .orElseGet(() -> categoryRepository.save(new Category(name)));
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("The category name is required");
+        }
+        String trimmed = name.trim();
+        return Optional.ofNullable(categoryRepository.findByName(trimmed))
+                .orElseGet(() -> categoryRepository.save(new Category(trimmed)));
     }
 
     private Product createProduct(AddProductRequest request, Category category) {
@@ -64,11 +73,17 @@ public class ProductService implements IProductService {
                 .orElseThrow(()-> new ResourceNotFoundException("Product not found!"));
     }
 
+    // Ordered products stay, so past orders keep their lines: they can be taken off sale by setting the stock to 0
+    @Transactional
     @Override
     public void deleteProductById(Long id) {
-        productRepository.findById(id)
-                .ifPresentOrElse(productRepository::delete,
-                        () -> {throw new ResourceNotFoundException("Product not found!");});
+        Product product = getProductById(id);
+        if (orderItemRepository.existsByProductId(id)) {
+            throw new ResourceInUseException("The product has been ordered and can't be deleted: set its stock to 0 instead");
+        }
+        // through Cart.removeItem, so the carts' totals stay right
+        cartItemRepository.findByProductId(id).forEach(item -> item.getCart().removeItem(item));
+        productRepository.delete(product);
     }
 
     @Override
@@ -147,7 +162,7 @@ public class ProductService implements IProductService {
     @Override
     public ProductDto convertToDto(Product product) {
         ProductDto productDto = modelMapper.map(product, ProductDto.class);
-        List<Image> images = imageRepository.findByProductId(product.getId());
+        List<Image> images = imageRepository.findByProductIdOrderByIdAsc(product.getId());
         List<ImageDto> imageDtos = images.stream()
                 .map(image -> modelMapper.map(image, ImageDto.class))
                 .toList();

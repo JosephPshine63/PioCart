@@ -4,6 +4,7 @@ import dev.pioruocco.piocart.dto.OrderDto;
 import dev.pioruocco.piocart.dto.OrderItemDto;
 import dev.pioruocco.piocart.enums.OrderStatus;
 import dev.pioruocco.piocart.exceptions.InsufficientStockException;
+import dev.pioruocco.piocart.exceptions.InvalidOrderStatusException;
 import dev.pioruocco.piocart.exceptions.PaymentFailedException;
 import dev.pioruocco.piocart.exceptions.PaymentProviderException;
 import dev.pioruocco.piocart.exceptions.ResourceNotFoundException;
@@ -15,6 +16,7 @@ import dev.pioruocco.piocart.model.Product;
 import dev.pioruocco.piocart.repository.ImageRepository;
 import dev.pioruocco.piocart.repository.OrderRepository;
 import dev.pioruocco.piocart.response.CheckoutResponse;
+import dev.pioruocco.piocart.response.PageResponse;
 import dev.pioruocco.piocart.service.cart.ICartService;
 import dev.pioruocco.piocart.service.payment.IPaymentService;
 import dev.pioruocco.piocart.service.payment.PaymentSession;
@@ -22,6 +24,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,8 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -41,6 +46,11 @@ public class OrderService implements IOrderService {
     private final ICartService cartService;
     private final IPaymentService paymentService;
     private final EntityManager entityManager;
+
+    // Status changes an admin can make; PENDING orders only move through checkout and payment
+    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
+            OrderStatus.PROCESSING, Set.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED),
+            OrderStatus.SHIPPED, Set.of(OrderStatus.DELIVERED));
 
     /**
      * Snapshots the cart into a PENDING order and opens a hosted payment for it. Stock is only checked here:
@@ -114,14 +124,7 @@ public class OrderService implements IOrderService {
         }
         order.setPaidAt(LocalDateTime.now());
 
-        // Lock the products (in id order, against deadlocks) so concurrent orders can't oversell
-        List<Product> products = order.getOrderItems().stream()
-                .map(OrderItem::getProduct)
-                .distinct()
-                .sorted(Comparator.comparing(Product::getId))
-                .toList();
-        products.forEach(product -> entityManager.refresh(product, LockModeType.PESSIMISTIC_WRITE));
-
+        lockProducts(order);
         for (OrderItem item : order.getOrderItems()) {
             Product product = item.getProduct();
             if (item.getQuantity() > product.getInventory()) {
@@ -137,6 +140,50 @@ public class OrderService implements IOrderService {
         Cart cart = cartService.getOrCreateCartForUser(userId);
         cartService.clearCart(cart.getId());
         return order;
+    }
+
+    @Override
+    public PageResponse<OrderDto> getPaidOrders(OrderStatus status, Pageable pageable) {
+        return PageResponse.of(
+                status == null
+                        ? orderRepository.findByPaidAtIsNotNull(pageable)
+                        : orderRepository.findByPaidAtIsNotNullAndOrderStatus(status, pageable),
+                this::convertToDto);
+    }
+
+    /**
+     * Moves a paid order along PROCESSING → SHIPPED → DELIVERED. Cancelling an order that hasn't shipped yet
+     * refunds the payment and puts its items back in stock.
+     */
+    @Transactional
+    @Override
+    public Order updateStatus(Long orderId, OrderStatus status) {
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (order.getOrderStatus() == status) {
+            return order;
+        }
+        if (!ALLOWED_TRANSITIONS.getOrDefault(order.getOrderStatus(), Set.of()).contains(status)) {
+            throw new InvalidOrderStatusException(
+                    "An order can't go from " + order.getOrderStatus() + " to " + status);
+        }
+        if (status == OrderStatus.CANCELLED) {
+            lockProducts(order);
+            order.getOrderItems().forEach(item ->
+                    item.getProduct().setInventory(item.getProduct().getInventory() + item.getQuantity()));
+            paymentService.refundSession(order.getPaymentSessionId());
+        }
+        order.setOrderStatus(status);
+        return order;
+    }
+
+    // Lock the order's products (in id order, against deadlocks) so concurrent stock changes can't interleave
+    private void lockProducts(Order order) {
+        order.getOrderItems().stream()
+                .map(OrderItem::getProduct)
+                .distinct()
+                .sorted(Comparator.comparing(Product::getId))
+                .forEach(product -> entityManager.refresh(product, LockModeType.PESSIMISTIC_WRITE));
     }
 
     private Order createOrder(Cart cart) {
@@ -198,7 +245,11 @@ public class OrderService implements IOrderService {
     public OrderDto convertToDto(Order order) {
         OrderDto orderDto = new OrderDto();
         orderDto.setId(order.getOrderId());
-        orderDto.setUserId(order.getUser() != null ? order.getUser().getId() : null);
+        if (order.getUser() != null) {
+            orderDto.setUserId(order.getUser().getId());
+            orderDto.setCustomerName(order.getUser().getFirstName() + " " + order.getUser().getLastName());
+            orderDto.setCustomerEmail(order.getUser().getEmail());
+        }
         orderDto.setOrderDate(order.getOrderDate());
         orderDto.setPaidAt(order.getPaidAt());
         orderDto.setTotalAmount(order.getTotalAmount());
