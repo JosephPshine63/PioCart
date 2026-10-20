@@ -1,0 +1,79 @@
+{
+  "categories": [
+    {
+      "name": "Elettronica",
+      "products": [
+        {"name": "Cuffie wireless WH-1000XM5", "brand": "Sony", "price": 329.00, "inventory": 18, "description": "Cuffie over-ear con cancellazione attiva del rumore, 30 ore di autonomia e ricarica rapida USB-C.", "image": "1505740420928-5e560c06d30e"},
+        {"name": "AirPods Pro (2a generazione)", "brand": "Apple", "price": 279.00, "inventory": 35, "description": "Auricolari in-ear con cancellazione del rumore, audio spaziale e custodia di ricarica MagSafe.", "image": "1572569511254-d8f925fe2cbb"},
+        {"name": "Speaker Bluetooth Flip 6", "brand": "JBL", "price": 129.99, "inventory": 22, "description": "Cassa portatile impermeabile IP67 con 12 ore di musica e bassi profondi.", "image": "1608043152269-423dbba4e7e1"},
+        {"name": "iPhone 15 Pro 256GB", "brand": "Apple", "price": 1339.00, "inventory": 6, "description": "Display Super Retina XDR da 6,1\", chip A17 Pro, telaio in titanio e tripla fotocamera da 48MP.", "image": "1589492477829-5e65395b66cc"},
+        {"name": "iPad Air 11\" 128GB", "brand": "Apple", "price": 699.00, "inventory": 10, "description": "Tablet con display Liquid Retina, chip M2 e supporto per Apple Pencil Pro.", "image": "1544244015-0df4b3ffc6b0"},
+        {"name": "Apple Watch Series 9 45mm", "brand": "Apple", "price": 479.00, "inventory": 14, "description": "Smartwatch con display sempre attivo, sensore ECG, rilevamento cadute e GPS.", "image": "1546868871-7041f2a55e12"},
+        {"name": "Fotocamera istantanea Now+", "brand": "Polaroid", "price": 149.99, "inventory": 3, "description": "Fotocamera a sviluppo istantaneo con autofocus a due zone, flash e cinque filtri colorati.", "image": "1526170375885-4d8ecf77b99f"},
+        {"name": "Smart TV 4K 55\"", "brand": "LG", "price": 649.00, "inventory": 7, "description": "Televisore UHD con HDR10, webOS e le principali app di streaming già installate.", "image": "1593359677879-a4bb92f829d1"},
+        {"name": "PlayStation 5 Slim", "brand": "Sony", "price": 549.99, "inventory": 0, "description": "Console con SSD da 1TB, controller DualSense e lettore Blu-ray Ultra HD.", "image": "1606813907291-d86efa9b94db"}
+      ]
+    },
+    {
+      "name": "Informatica",
+      "products": [
+        {"name": "MacBook Pro 14\" M3", "brand": "Apple", "price": 1999.00, "inventory": 5, "description": "Portatile con chip M3, 16GB di memoria unificata, SSD da 512GB e display Liquid Retina XDR.", "image": "1531297484001-80022131f5a1"},
+        {"name": "MacBook Air 13\" M2", "brand": "Apple", "price": 1149.00, "inventory": 9, "description": "Ultraleggero senza ventola, 18 ore di autonomia e display Liquid Retina da 13,6\".", "image": "1496181133206-80ce9b88a853"},
+        {"name": "Notebook Latitude 14", "brand": "Dell", "price": 899.00, "inventory": 12, "description": "Portatile business con Intel Core i5, 16GB di RAM, SSD da 512GB e tastiera retroilluminata.", "image": "1588872657578-7efd1f1555ed"},
+        {"name": "iMac 24\" M3", "brand": "Apple", "price": 1599.00, "inventory": 4, "description": "All-in-one con display Retina 4.5K, chip M3, tastiera e mouse inclusi.", "image": "1527443224154-c4a3942d3acf"},
+        {"name": "PC gaming RGB", "brand": "PioTech", "price": 1749.00, "inventory": 2, "description": "Ryzen 7, RTX 4070, 32GB di RAM DDR5, SSD NVMe da 2TB e raffreddamento a liquido.", "image": "1597872200969-2b65d56bd16b"},
+        {"name": "Tastiera meccanica K2", "brand": "Keychron", "price": 99.00, "inventory": 28, "description": "Tastiera compatta 75% wireless e cablata, switch Gateron e compatibilità Mac e Windows.", "image": "1618384887929-16ec33fab9ef"},
+        {"name": "Mouse G Pro X Superlight", "brand": "Logitech", "price": 139.99, "inventory": 20, "description": "Mouse gaming wireless da 63g con sensore HERO 25K e 70 ore di autonomia.", "image": "1615663245857-ac93bb7c39e7"}
+      ]
+    },
+    {
+      "name": "Moda",
+      "products": [
+        {"name": "Sneakers Flyknit", "brand": "Nike", "price": 159.99, "inventory": 24, "description": "Sneakers leggere con tomaia in maglia traspirante e intersuola reattiva.", "image": "1542291026-7eec264c27ff"},
+        {"name": "Air Max 1", "brand": "Nike", "price": 149.99, "inventory": 16, "description": "Il classico con unità Air visibile, tomaia in pelle scamosciata e mesh.", "image": "1600185365483-26d7a4cc7519"},
+        {"name": "Occhiali da sole Wayfarer", "brand": "Ray-Ban", "price": 169.00, "inventory": 30, "description": "Montatura in acetato nero e lenti G-15 con protezione UV al 100%.", "image": "1572635196237-14b3f281503f"},
+        {"name": "Zaino urbano 20L", "brand": "Eastpak", "price": 69.90, "inventory": 40, "description": "Zaino in tessuto idrorepellente con tasca imbottita per laptop da 15\".", "image": "1553062407-98eeb64c6a62"},
+        {"name": "T-shirt in cotone biologico", "brand": "PioWear", "price": 24.90, "inventory": 120, "description": "T-shirt bianca girocollo in cotone biologico pettinato, vestibilità regolare.", "image": "1521572163474-6864f9cf17ab"},
+        {"name": "Felpa con cappuccio", "brand": "PioWear", "price": 54.90, "inventory": 45, "description": "Felpa grigio melange in cotone garzato con tasca a marsupio.", "image": "1556821840-3a63f95609a7"},
+        {"name": "Jeans 501 Original", "brand": "Levi's", "price": 109.00, "inventory": 33, "description": "Jeans a gamba dritta con chiusura a bottoni, in denim 100% cotone.", "image": "1542272604-787c3835535d"},
+        {"name": "Borsa a tracolla in pelle", "brand": "Gucci", "price": 1290.00, "inventory": 2, "description": "Borsa in pelle matelassé con tracolla a catena e chiusura magnetica.", "image": "1548036328-c9fa89d128fa"},
+        {"name": "Scarpe derby in camoscio", "brand": "PioWear", "price": 129.00, "inventory": 11, "description": "Scarpe stringate in camoscio verde con suola in cuoio cucita a mano.", "image": "1560343090-f0409e92791a"}
+      ]
+    },
+    {
+      "name": "Casa e cucina",
+      "products": [
+        {"name": "Caffè in grani 1kg", "brand": "Lavazza", "price": 18.90, "inventory": 80, "description": "Miscela arabica e robusta a tostatura media, ideale per espresso.", "image": "1517668808822-9ebb02f2a0e6"},
+        {"name": "Macinacaffè elettrico", "brand": "Baratza", "price": 189.00, "inventory": 8, "description": "Macinacaffè a macine coniche con 40 gradi di macinatura.", "image": "1570222094114-d054a817e56b"},
+        {"name": "Tazza in ceramica 350ml", "brand": "PioHome", "price": 12.50, "inventory": 150, "description": "Tazza bianca in gres porcellanato, adatta a lavastoviglie e microonde.", "image": "1514228742587-6b1558fcca3d"},
+        {"name": "Set coltelli da cucina 6 pezzi", "brand": "Zwilling", "price": 219.00, "inventory": 9, "description": "Coltelli forgiati in acciaio inox con manico in legno e rotolo portacoltelli.", "image": "1593618998160-e34014e67546"},
+        {"name": "Lampada da terra", "brand": "IKEA", "price": 39.99, "inventory": 25, "description": "Lampada da lettura in acciaio grigio con paralume orientabile.", "image": "1507473885765-e6ed057f782c"},
+        {"name": "Sgabello in legno", "brand": "PioHome", "price": 49.00, "inventory": 18, "description": "Sgabello in betulla massello, alto 45cm, adatto anche come comodino.", "image": "1503602642458-232111445657"},
+        {"name": "Pianta grassa con vaso", "brand": "PioHome", "price": 14.90, "inventory": 60, "description": "Haworthia in vaso di ceramica, cresce bene anche con poca luce.", "image": "1485955900006-10f4d324d411"},
+        {"name": "Candela profumata", "brand": "Yankee Candle", "price": 27.50, "inventory": 42, "description": "Candela in vetro con cera di soia, fino a 50 ore di combustione.", "image": "1602874801007-bd458bb1b8b6"}
+      ]
+    },
+    {
+      "name": "Sport",
+      "products": [
+        {"name": "Tappetino yoga 6mm", "brand": "Decathlon", "price": 24.99, "inventory": 55, "description": "Tappetino antiscivolo in TPE, leggero e con cinghia per il trasporto.", "image": "1601925260368-ae2f83cf8b7f"},
+        {"name": "Manubri regolabili 2x10kg", "brand": "Domyos", "price": 79.99, "inventory": 15, "description": "Coppia di manubri con dischi in ghisa e chiusure a vite.", "image": "1583454110551-21f2fa2afe61"},
+        {"name": "Bici da città single speed", "brand": "Bianchi", "price": 449.00, "inventory": 4, "description": "Telaio in acciaio, ruote da 28\" e freni a pinza, perfetta per la città.", "image": "1485965120184-e220f721d03e"},
+        {"name": "Scarpe da running Pegasus", "brand": "Nike", "price": 139.99, "inventory": 27, "description": "Scarpe da corsa ammortizzate per allenamenti quotidiani su strada.", "image": "1606107557195-0e29a4b5b4aa"},
+        {"name": "Scarpe da running React", "brand": "Nike", "price": 119.99, "inventory": 19, "description": "Scarpe leggere con schiuma React e tomaia in mesh traspirante.", "image": "1491553895911-0055eca6402d"},
+        {"name": "Borraccia termica 500ml", "brand": "PioSport", "price": 22.90, "inventory": 90, "description": "Borraccia in acciaio inox a doppia parete: 24 ore fredda, 12 ore calda.", "image": "1602143407151-7111542de6e8"},
+        {"name": "Pallone da calcio", "brand": "Adidas", "price": 34.99, "inventory": 38, "description": "Pallone taglia 5 con cuciture termosaldate, per erba naturale e sintetica.", "image": "1614632537190-23e4146777db"},
+        {"name": "Racchetta da tennis", "brand": "Wilson", "price": 189.00, "inventory": 7, "description": "Racchetta da 300g con piatto da 100 pollici quadrati, già incordata.", "image": "1622279457486-62dcc4a431d6"}
+      ]
+    },
+    {
+      "name": "Libri",
+      "products": [
+        {"name": "Milk and Honey", "brand": "Andrews McMeel", "price": 14.90, "inventory": 50, "description": "La raccolta di poesie di Rupi Kaur su amore, perdita e guarigione.", "image": "1544947950-fa07a98d237f"},
+        {"name": "How Innovation Works", "brand": "Harper", "price": 19.50, "inventory": 21, "description": "Matt Ridley racconta come nascono le innovazioni e perché prosperano nella libertà.", "image": "1589829085413-56de8ae18c73"},
+        {"name": "Zero to One", "brand": "Crown Business", "price": 17.90, "inventory": 26, "description": "Peter Thiel spiega come costruire il futuro creando qualcosa di davvero nuovo.", "image": "1512820790803-83ca734da794"},
+        {"name": "Il piccolo principe", "brand": "Bompiani", "price": 9.90, "inventory": 70, "description": "Il racconto di Antoine de Saint-Exupéry, in edizione tascabile.", "image": "1544716278-ca5e3f4abd8c"}
+      ]
+    }
+  ]
+}

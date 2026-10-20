@@ -37,6 +37,7 @@ services:
       STRIPE_API_KEY: ${STRIPE_API_KEY:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SEED_CATALOG: ${SEED_CATALOG:-false}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:9191/api/v1/categories/all >/dev/null"]
       interval: 10s

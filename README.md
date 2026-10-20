@@ -76,12 +76,13 @@ Il backend gira con Docker su un server Ubuntu ed è pubblicato in HTTPS con **T
    - `DB_PASSWORD`;
    - `STRIPE_API_KEY`;
    - `FRONTEND_URL` e `CORS_ALLOWED_ORIGINS`, entrambe con l'URL `https://<progetto>.vercel.app`;
-   - `ADMIN_EMAIL` e `ADMIN_PASSWORD`, per creare il primo amministratore.
+   - `ADMIN_EMAIL` e `ADMIN_PASSWORD`, per creare il primo amministratore;
+   - `SEED_CATALOG=true`, se vuoi un catalogo di prova: 45 prodotti in 6 categorie, definiti in `src/main/resources/seed/catalog.json`, con le foto scaricate da Unsplash all'avvio. I prodotti già presenti (stesso nome e marca) vengono saltati, quindi la variabile può restare attiva. Se una foto non si scarica, il prodotto resta senza immagine.
 3. Avvia Postgres e l'app:
    ```bash
    docker compose --profile app up -d --build
    ```
-   - Il profilo `dev` non va usato in produzione, perché crea account con password note.
+   - Il profilo `dev` non va usato in produzione, perché crea account con password note. Per popolare il catalogo usa `SEED_CATALOG`.
    - Le porte sono legate a `127.0.0.1`. Se `5432` o `9191` sono già occupate, cambiale con `DB_PORT` e `APP_PORT`.
    - L'immagine viene compilata senza test, quindi esegui `./mvnw test` prima del deploy.
 4. Pubblica il backend con Tailscale Funnel:
