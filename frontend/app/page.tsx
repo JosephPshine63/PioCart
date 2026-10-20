@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ProductCard } from "@/components/product-card";
+import { ProductGrid } from "@/components/product-grid";
 import { getCategories, getProducts } from "@/lib/api/catalog";
 
 export default async function HomePage() {
@@ -43,11 +43,7 @@ export default async function HomePage() {
         {latest.content.length === 0 ? (
           <p className="text-muted-foreground">Nessun prodotto disponibile al momento.</p>
         ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-            {latest.content.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <ProductGrid products={latest.content} />
         )}
       </section>
     </div>

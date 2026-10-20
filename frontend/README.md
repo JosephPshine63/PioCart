@@ -43,7 +43,10 @@ npm run lint    # ESLint
 ## Struttura
 
 - `app/` – pagine, Server Actions (`app/actions`) e proxy delle immagini (`app/api/images/[id]`)
-- `components/` – header, footer, card prodotto e componenti shadcn/ui (`components/ui`)
+- `app/products`, `app/categories/[name]` – catalogo con filtri, ordinamento e paginazione nei `searchParams`, pagina prodotto
+- `components/` – header, footer, griglia e vista catalogo, galleria prodotto e componenti shadcn/ui (`components/ui`)
 - `lib/api/` – client HTTP verso il backend, tipi dei DTO e funzioni del catalogo con cache
+- `lib/catalog-params.ts` – lettura e costruzione degli URL del catalogo (filtri, ordinamento, pagina)
+- `public/brand/`, `app/icon.png` – logo e icona dell'app
 - `lib/auth.ts`, `lib/session.ts` – cookie del token, utente corrente e carrello
 - `proxy.ts` – protegge `/account`, `/checkout` e `/admin` reindirizzando al login
