@@ -1,68 +1,108 @@
-# Pio-Cart (Dream Shops)
+# Pio-Cart
 
-Pio-Cart è il backend per una piattaforma di e-commerce moderna sviluppata interamente in **Java 17** e **Spring Boot 3**. Il progetto fornisce un set completo di API RESTful per gestire tutti gli aspetti fondamentali di un negozio online, come i prodotti, le categorie, un carrello degli acquisti, gli ordini e gli utenti.
+Pio-Cart è una piattaforma di e-commerce composta da due parti:
+- un backend REST in **Java 17** e **Spring Boot 3** che gestisce prodotti, categorie, immagini, carrelli, ordini e utenti;
+- uno storefront in **Next.js 16** (cartella `frontend/`), descritto in `frontend/README.md`.
 
 ## 🚀 Obiettivi del Progetto
 
-Il progetto "Pio-Cart" funge da core engine per l'applicazione, offrendo:
-- Strutturazione del dominio E-commerce (Prodotti, Categorie, Utenti, ecc.).
-- Gestione di un Carrello dinamico per utente.
-- Finalizzazione di un Ordine e gestione dello storico (Order / OrderItems).
-- Persistenza dei dati in un database relazionale tramite **Spring Data JPA**.
+- Catalogo con ricerca, filtri per categoria e marca, ordinamento e paginazione.
+- Registrazione e login con JWT, con ruoli `USER` e `ADMIN`.
+- Un carrello per ogni utente.
+- Pagamento con **Stripe Checkout** in modalità test e storico degli ordini.
+- Area di amministrazione per catalogo e ordini.
 
 ## 🛠 Stack Tecnologico
 
-- **Linguaggio**: Java 17
-- **Framework**: Spring Boot 3.3.2
+- **Backend**: Java 17, Spring Boot 3.3.2
   - *Spring Web* (REST API)
-  - *Spring Data JPA* (Gestione Data Access)
-  - *Spring Validation* (Validazione degli input)
-- **Database**: PostgreSQL (gestito tramite Docker per lo sviluppo locale)
-- **Librerie di Supporto**:
-  - **Lombok**: riduzione del codice boilerplate (getter/setter/costruttori).
-  - **ModelMapper**: per una facile e pulita conversione automatica tra classi Entity e Data Transfer Object (DTO).
-- **Ambiente & Deploy**: Docker & Docker Compose (per il database e i servizi correlati).
+  - *Spring Data JPA* (accesso ai dati)
+  - *Spring Validation* (validazione degli input)
+  - *Spring Security* con JWT (jjwt) e password cifrate con BCrypt
+  - *Stripe Java* per i pagamenti
+  - *springdoc-openapi* per Swagger UI
+- **Database**: PostgreSQL 15, avviato con Docker
+- **Librerie di supporto**:
+  - **Lombok**: riduce il codice boilerplate (getter, setter, costruttori).
+  - **ModelMapper**: converte le entità in DTO.
+- **Test**: test di integrazione con MockMvc e **Testcontainers**
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4 e shadcn/ui
+- **Deploy**: Docker Compose e Tailscale Funnel per il backend, Vercel per il frontend, GitHub Actions per la CI/CD
 
 ## 🗂 Struttura del Dominio e Entità Principali
 
-Il progetto gestisce diverse entità cruciali per lo shop:
-- **Product & Category**: Gestione dell'inventario. Ogni prodotto appartiene ad una determinata categoria.
-- **Image**: Sistema per la gestione e l'upload delle immagini dei prodotti, le cui informazioni sono salvate a database e recuperabili tramite apposito endpoint.
-- **Cart & CartItem**: Carrello della spesa interattivo. L'utente può aggiungere prodotti (CartItem), aggiornarne la quantita ed eliminarli.
-- **Order & OrderItem**: Elaborazione del checkout. Permette di tracciare lo stato dell'ordine e di mantenere una "fotografia" del prezzo e dell'articolo al momento in cui l'utente ha completato l'acquisto. Il pagamento passa da **Stripe Checkout**: `POST /orders/checkout` crea l'ordine `PENDING` e la pagina di pagamento, `POST /orders/confirm?sessionId=...` verifica con Stripe che sia stato pagato l'importo giusto, scala le giacenze, svuota il carrello e porta l'ordine in `PROCESSING`. `GET /orders/me` restituisce lo storico dei soli ordini pagati, senza i checkout abbandonati. Gli amministratori vedono tutti gli ordini pagati con `GET /orders?status=` e li fanno avanzare con `PUT /orders/{id}/status?status=` (`PROCESSING` → `SHIPPED` → `DELIVERED`; annullare un ordine non ancora spedito rimborsa il pagamento e rimette gli articoli in magazzino).
-- **User**: Gestione dell'anagrafica degli utenti della piattaforma. Interagisce direttamente con il Carrello di sua proprietà.
+- **Product & Category**: gestione dell'inventario. Ogni prodotto appartiene a una categoria, che viene creata automaticamente se non esiste. `GET /products` è la ricerca paginata, con i parametri `category`, `brand`, `q`, `page`, `size` e `sort`. Non si possono eliminare un prodotto già ordinato né una categoria che contiene prodotti.
+- **Image**: le immagini dei prodotti sono salvate nel database (massimo 5 MB, solo `image/*`, niente SVG) e si scaricano da un apposito endpoint.
+- **Cart & CartItem**: ogni utente ha il proprio carrello (`/carts/me`, `/cartItems/me/...`), ricavato dal token. Può aggiungere prodotti, cambiarne la quantità ed eliminarli.
+- **Order & OrderItem**: l'ordine conserva una "fotografia" del prezzo e degli articoli al momento dell'acquisto. Il pagamento passa da **Stripe Checkout**:
+  - `POST /orders/checkout` crea l'ordine `PENDING` e la pagina di pagamento;
+  - `POST /orders/confirm?sessionId=...` verifica con Stripe che sia stato pagato l'importo giusto, scala le giacenze, svuota il carrello e porta l'ordine in `PROCESSING`;
+  - `GET /orders/me` restituisce lo storico dei soli ordini pagati, senza i checkout abbandonati;
+  - gli amministratori vedono tutti gli ordini pagati con `GET /orders?status=` e li fanno avanzare con `PUT /orders/{id}/status?status=`: `PROCESSING` → `SHIPPED` → `DELIVERED`. Annullare un ordine non ancora spedito rimborsa il pagamento e rimette gli articoli in magazzino.
+- **User**: registrazione e login con `/auth/register` e `/auth/login`, profilo letto con `GET /auth/me` e modificato con `PUT /users/me`. La registrazione crea sempre utenti `USER`; il primo `ADMIN` si crea con `ADMIN_EMAIL` e `ADMIN_PASSWORD`.
+
+## 🔐 Autenticazione
+
+`POST /auth/login` restituisce un JWT, da inviare nell'header `Authorization: Bearer <token>`.
+- **Senza token**: le letture del catalogo (prodotti, categorie, immagini), la registrazione, il login e Swagger.
+- **Ruolo `ADMIN`**: le modifiche al catalogo, la gestione degli utenti e quella degli ordini.
+- **Qualsiasi utente autenticato**: tutto il resto.
+
+Senza token si riceve `401`, con il ruolo sbagliato `403`.
 
 ## ⚙️ Setup ed Esecuzione Locale
 
-Per testare il progetto sul tuo computer, assicurati di avere installati **Java 17**, **Maven**, e **Docker Desktop** (o un demone Docker locale funzionante).
+Servono **Java 17** e **Docker**. Maven non serve, perché il progetto include il wrapper `./mvnw`. Per il frontend serve anche **Node.js 20** o superiore.
 
 ### 1. Inizializzare il Database
-L'applicazione è configurata per usare **PostgreSQL**. Nella root del progetto è fornito un file `docker-compose.yml` pronto all'uso. 
-Esegui il seguente comando nel tuo terminale, all'interno della medesima cartella:
+Dalla root del progetto avvia Postgres con il `docker-compose.yml` fornito:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
-Questo scaricherà l'immagine di Postgres e la avvierà esponendo la porta `5432`, e creerà automaticamente un database chiamato `piocart_db` con utente e password limitati allo sviluppo (`postgres`/`postgres`).
+- Il database `piocart_db` è esposto su `localhost:5432`, con utente e password di sviluppo `postgres`/`postgres`.
+- Senza il profilo `app` parte solo Postgres.
 
 ### 2. Avvio dell'Applicazione
-L'applicazione andrà in ascolto di default sulla porta `9191` come definito da `application.properties`.
-
-Puoi lanciare l'applicativo direttamente tramite Maven dalla root del progetto:
 ```bash
-mvn spring-boot:run
+./mvnw spring-boot:run                                  # porta 9191
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev   # con dati di prova
 ```
-In alternativa puoi utilizzare il tuo IDE preferito avviando la classe principale `PioCartApplication.java`, che è il punto di ingresso per Spring Boot.
+Il profilo `dev` riempie un database vuoto con categorie e prodotti di esempio e crea due account:
+- `admin@piocart.dev` / `admin1234`, con ruolo `ADMIN`;
+- `user@piocart.dev` / `user1234`, con ruolo `USER`.
+
+Per il catalogo completo, con 45 prodotti e le foto, usa invece `SEED_CATALOG=true` (vedi [Deploy](#backend-sul-server)).
+
+*Nota: alla prima esecuzione **Hibernate** crea o aggiorna da solo le tabelle a partire dalle entità Java, grazie a `ddl-auto=update`.*
 
 ### 3. Pagamenti con Stripe (modalità test)
-Il checkout usa una chiave segreta Stripe di test. Copia `.env.example` in `.env` (escluso da git) e inserisci la tua chiave `sk_test_...`, presa da https://dashboard.stripe.com/test/apikeys. All'avvio Spring Boot importa il file; una variabile d'ambiente `STRIPE_API_KEY` ha comunque la precedenza. Senza chiave il resto dell'app funziona, ma il checkout risponde `502`.
+- Copia `.env.example` in `.env` (escluso da git) e inserisci la tua chiave `sk_test_...`, presa da https://dashboard.stripe.com/test/apikeys.
+- All'avvio Spring Boot importa il file; una variabile d'ambiente `STRIPE_API_KEY` ha comunque la precedenza.
+- Senza chiave il resto dell'app funziona, ma il checkout risponde `502`.
+- Per pagare in test usa la carta `4242 4242 4242 4242`, con una data di scadenza futura e un CVC qualsiasi.
+- Dopo il pagamento Stripe rimanda a `FRONTEND_URL/checkout/confirm`.
 
-Per pagare in test usa la carta `4242 4242 4242 4242`, con una data di scadenza futura e un CVC qualsiasi. Il ritorno da Stripe arriva su `FRONTEND_URL/checkout/confirm`.
+### 4. Frontend
+```bash
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev   # http://localhost:3000
+```
 
-*Nota: Alla prima esecuzione, **Hibernate** andrà a generare e/o aggiornare in automatico in base alle entità Java tutte le tabelle nel database relazionale grazie alle impostazioni `ddl-auto=update`.*
+### 5. Test
+```bash
+./mvnw test
+```
+I test avviano un Postgres temporaneo con Testcontainers, quindi richiedono Docker ma non il database di `docker compose`. Stripe è sostituito da un mock.
 
 ## 🔗 Utilizzo delle API
-Tutte le chiamate REST sono sotto il raggruppamento specificato da `api.prefix` nel file di properties, e quindi avranno endpoint base corrispondente a:
+Tutte le chiamate REST sono sotto il prefisso `api.prefix` definito nel file di properties, quindi l'URL base è:
 `http://localhost:9191/api/v1/...`
+
+- Ogni risposta ha la forma `{ "message": ..., "data": ... }`, anche in caso di errore.
+- Fa eccezione il download delle immagini, che restituisce i byte del file.
+- La documentazione interattiva è su Swagger UI, `http://localhost:9191/swagger-ui.html`.
 
 ## 🚢 Deploy
 
@@ -106,7 +146,7 @@ Il backend gira con Docker su un server Ubuntu ed è pubblicato in HTTPS con **T
   - se la build fallisce o l'app non diventa healthy, torna al commit precedente.
 - **Deploy del frontend:** dopo il backend, `vercel deploy --prod`. I deploy automatici di Vercel da Git sono disattivati in `frontend/vercel.json`, così si pubblica solo codice testato.
 
-Secret del repository da configurare su GitHub (Settings → Secrets and variables → Actions):
+Secret del repository da configurare su GitHub (Settings → Secrets and variables → Actions). Finché mancano, i job di deploy falliscono al passo "Connect to Tailscale", mentre test e build passano comunque:
 
 | Secret | Valore |
 |---|---|
