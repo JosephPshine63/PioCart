@@ -20,6 +20,9 @@ public class JwtService {
 
     public JwtService(@Value("${app.jwt.secret}") String secret,
                       @Value("${app.jwt.expiration}") Duration expiration) {
+        if (secret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET is empty: set a base64 key of at least 256 bits");
+        }
         this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
         this.expiration = expiration;
     }

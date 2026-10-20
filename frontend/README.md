@@ -30,6 +30,7 @@ docker-compose up -d
 |---|---|
 | `BACKEND_URL` | URL del backend, usato solo lato server (es. `http://localhost:9191`) |
 | `NEXT_PUBLIC_SITE_URL` | URL pubblico del sito, usato per i metadata |
+| `STRIPE_TEST_MODE` | `true` mostra la carta di test nel checkout |
 
 ## Comandi
 
@@ -38,7 +39,22 @@ npm run dev     # server di sviluppo
 npm run build   # build di produzione (richiede il backend raggiungibile)
 npm run start   # avvia la build di produzione
 npm run lint    # ESLint
+npm run typecheck  # tipi delle route e TypeScript
 ```
+
+## Deploy su Vercel
+
+1. Importa il repository su Vercel e imposta **Root Directory** su `frontend`. Il framework Next.js viene rilevato da solo.
+2. Imposta le variabili d'ambiente:
+   - `BACKEND_URL`: l'URL di Tailscale Funnel, `https://<macchina>.<tailnet>.ts.net`;
+   - `NEXT_PUBLIC_SITE_URL`: l'URL `https://<progetto>.vercel.app`;
+   - `STRIPE_TEST_MODE=true`.
+3. Fai il deploy. Durante la build vengono lette categorie e prodotti, quindi il backend deve essere raggiungibile. Dopo il primo deploy, i deploy successivi li fa la pipeline di GitHub Actions a ogni push su `main`, dopo i test e il deploy del backend. I deploy automatici di Vercel da Git sono disattivati in `vercel.json`.
+4. Sul server imposta lo stesso URL `vercel.app` in `FRONTEND_URL` e `CORS_ALLOWED_ORIGINS` (nel `.env` del backend), poi riavvia il backend.
+
+Le funzioni girano a Francoforte (`regions` in `vercel.json`), vicino al backend.
+
+Vercel accetta richieste fino a 4,5 MB. Per questo le immagini dei prodotti vengono caricate una alla volta, con un massimo di 4 MB ciascuna.
 
 ## Struttura
 

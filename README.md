@@ -63,3 +63,57 @@ Per pagare in test usa la carta `4242 4242 4242 4242`, con una data di scadenza 
 ## 🔗 Utilizzo delle API
 Tutte le chiamate REST sono sotto il raggruppamento specificato da `api.prefix` nel file di properties, e quindi avranno endpoint base corrispondente a:
 `http://localhost:9191/api/v1/...`
+
+## 🚢 Deploy
+
+Il backend gira con Docker su un server Ubuntu ed è pubblicato in HTTPS con **Tailscale Funnel**, senza dominio e senza aprire porte sul router. Lo storefront (`frontend/`) è su **Vercel** e chiama il backend solo lato server.
+
+### Backend sul server
+
+1. Installa Docker e clona il repository.
+2. Copia `.env.example` in `.env` e compila le variabili della sezione server:
+   - `JWT_SECRET`, generato con `openssl rand -base64 48`;
+   - `DB_PASSWORD`;
+   - `STRIPE_API_KEY`;
+   - `FRONTEND_URL` e `CORS_ALLOWED_ORIGINS`, entrambe con l'URL `https://<progetto>.vercel.app`;
+   - `ADMIN_EMAIL` e `ADMIN_PASSWORD`, per creare il primo amministratore.
+3. Avvia Postgres e l'app:
+   ```bash
+   docker compose --profile app up -d --build
+   ```
+   - Il profilo `dev` non va usato in produzione, perché crea account con password note.
+   - Le porte sono legate a `127.0.0.1`. Se `5432` o `9191` sono già occupate, cambiale con `DB_PORT` e `APP_PORT`.
+   - L'immagine viene compilata senza test, quindi esegui `./mvnw test` prima del deploy.
+4. Pubblica il backend con Tailscale Funnel:
+   - nella console di Tailscale abilita **MagicDNS**, i **certificati HTTPS** e l'attributo `funnel` nella policy;
+   - poi esegui:
+     ```bash
+     sudo tailscale funnel --bg 9191
+     tailscale funnel status
+     ```
+   - il backend risponde su `https://<macchina>.<tailnet>.ts.net/api/v1/...`.
+5. Per aggiornare a mano esegui `git pull` e poi di nuovo `docker compose --profile app up -d --build`. I dati restano nel volume `postgres_data`.
+
+### CI/CD
+
+`.github/workflows/ci.yml` gira su ogni pull request e su ogni push su `main`:
+- **Backend:** `./mvnw test` (Testcontainers) e build dell'immagine Docker.
+- **Frontend:** `npm run lint` e `npm run typecheck`.
+- **Deploy del backend** (solo su `main`, a test passati):
+  - entra nella tailnet con un client OAuth di Tailscale, con tag `tag:ci`;
+  - via SSH su `gpr-server` esegue `git pull` e `docker compose --profile app up --build -d --wait` in `~/Applications/PioCart`;
+  - se la build fallisce o l'app non diventa healthy, torna al commit precedente.
+- **Deploy del frontend:** dopo il backend, `vercel deploy --prod`. I deploy automatici di Vercel da Git sono disattivati in `frontend/vercel.json`, così si pubblica solo codice testato.
+
+Secret del repository da configurare su GitHub (Settings → Secrets and variables → Actions):
+
+| Secret | Valore |
+|---|---|
+| `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_CLIENT_SECRET` | Client OAuth di Tailscale con scope `auth_keys` e tag `tag:ci` (gli stessi di GprFlow) |
+| `DEPLOY_SSH_KEY` | Chiave privata autorizzata per `gpr-server@gpr-server` |
+| `VERCEL_TOKEN` | Token da https://vercel.com/account/tokens |
+| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Id del team e del progetto, nel file `.vercel/project.json` creato da `npx vercel link` oppure nelle impostazioni del progetto |
+
+### Frontend su Vercel
+
+Vedi `frontend/README.md`.
