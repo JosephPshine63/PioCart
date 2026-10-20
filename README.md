@@ -147,6 +147,9 @@ Il backend gira con Docker su un server Ubuntu ed è pubblicato in HTTPS con **T
   - via SSH su `gpr-server` esegue `git pull` e `docker compose --profile app up --build -d --wait` in `~/Applications/PioCart`;
   - se la build fallisce o l'app non diventa healthy, torna al commit precedente.
 - **Deploy del frontend:** dopo il backend, `vercel deploy --prod`. I deploy automatici di Vercel da Git sono disattivati in `frontend/vercel.json`, così si pubblica solo codice testato.
+- **Controllo SEO:** dopo il deploy, `frontend/scripts/check-seo.mjs` controlla il sito di produzione. Viene ripetuto fino a 5 volte, a 30 secondi di distanza, perché per qualche istante Vercel può servire ancora il deploy precedente.
+
+Ogni push su `main` ripubblica quindi sia il backend sia il frontend, ma solo se test, lint e typecheck passano. Se il deploy del backend fallisce, il frontend non viene pubblicato. La pipeline si può lanciare anche a mano con `gh workflow run CI/CD` o da GitHub → Actions → "Run workflow".
 
 Secret del repository da configurare su GitHub (Settings → Secrets and variables → Actions). Finché mancano, i job di deploy falliscono al passo "Connect to Tailscale", mentre test e build passano comunque:
 
@@ -155,11 +158,18 @@ Secret del repository da configurare su GitHub (Settings → Secrets and variabl
 | `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_CLIENT_SECRET` | Client OAuth di Tailscale con scope `auth_keys` e tag `tag:ci` (gli stessi di GprFlow) |
 | `DEPLOY_SSH_KEY` | Chiave privata autorizzata per `gpr-server@gpr-server` |
 | `VERCEL_TOKEN` | Token da https://vercel.com/account/tokens |
-| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Id del team e del progetto, nel file `.vercel/project.json` creato da `npx vercel link` oppure nelle impostazioni del progetto |
+| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Id del team e del progetto, nelle impostazioni del progetto su Vercel. In alternativa, dalla root del repository esegui `npx vercel link`: le versioni recenti della CLI li scrivono in `.vercel/repo.json` (`orgId` e `id`), le precedenti in `frontend/.vercel/project.json`. La cartella `.vercel` è esclusa da git. |
 
 ### Frontend su Vercel
 
 Vedi `frontend/README.md`.
+
+### Google Search Console
+
+Il sito è registrato su Google Search Console come proprietà con prefisso URL `https://pio-cart-psi.vercel.app/`.
+- La proprietà è verificata con il file `frontend/public/google497762d2597ed6a7.html`. Non va cancellato, perché Google lo ricontrolla periodicamente.
+- La sitemap inviata è `sitemap.xml`, generata da `frontend/app/sitemap.ts`, con home, catalogo, `/about`, le categorie e i prodotti.
+- I dati strutturati delle pagine si possono controllare con il [Rich Results Test](https://search.google.com/test/rich-results).
 
 ## 👤 Autore
 
