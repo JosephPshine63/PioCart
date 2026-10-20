@@ -43,6 +43,7 @@ npm run lint    # ESLint
 ## Struttura
 
 - `app/` – pagine, Server Actions (`app/actions`) e proxy delle immagini (`app/api/images/[id]`)
+- `app/(auth)/login`, `app/(auth)/register` – accesso e registrazione con Server Actions (`app/actions/auth.ts`), validazione zod (`lib/auth-schema.ts`) e ritorno alla pagina di partenza con `returnTo`
 - `app/products`, `app/categories/[name]` – catalogo con filtri, ordinamento e paginazione nei `searchParams`, pagina prodotto
 - `components/` – header, footer, griglia e vista catalogo, galleria prodotto e componenti shadcn/ui (`components/ui`)
 - `lib/api/` – client HTTP verso il backend, tipi dei DTO e funzioni del catalogo con cache
