@@ -56,7 +56,7 @@ export function CartSheet({ cart: serverCart }: { cart: Cart }) {
               <span>Subtotale</span>
               <span className="tabular-nums">{formatPrice(cart.totalAmount)}</span>
             </div>
-            <p className="text-xs text-muted-foreground">Spedizione calcolata al checkout.</p>
+            <p className="text-xs text-muted-foreground">Spedizione gratuita.</p>
             <Separator className="my-1" />
             <Button asChild size="lg">
               <Link href="/cart" onClick={close}>

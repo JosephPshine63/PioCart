@@ -1,18 +1,28 @@
 package dev.pioruocco.piocart;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import dev.pioruocco.piocart.enums.OrderStatus;
+import dev.pioruocco.piocart.exceptions.PaymentProviderException;
 import dev.pioruocco.piocart.model.Category;
+import dev.pioruocco.piocart.model.Order;
 import dev.pioruocco.piocart.model.Product;
 import dev.pioruocco.piocart.repository.CategoryRepository;
+import dev.pioruocco.piocart.repository.OrderRepository;
 import dev.pioruocco.piocart.repository.ProductRepository;
+import dev.pioruocco.piocart.service.payment.PaymentSession;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -24,6 +34,10 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
     private ProductRepository productRepository;
     @Autowired
     private CategoryRepository categoryRepository;
+    @Autowired
+    private OrderRepository orderRepository;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Product newProduct(String name, String brand, int inventory) {
         String categoryName = "cat-" + UUID.randomUUID();
@@ -114,22 +128,46 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void placeOrderSnapshotsCartAndDecrementsInventory() throws Exception {
+    void paidCheckoutPlacesOrderDecrementsInventoryAndEmptiesCart() throws Exception {
         Product product = newProduct("Notebook", "Acme", 10);
         String token = registerUser();
+        addToCart(token, product, 4);
 
-        mockMvc.perform(post("/api/v1/cartItems/me/add").with(bearer(token))
-                        .param("productId", product.getId().toString())
-                        .param("quantity", "4"))
-                .andExpect(status().isOk());
-
-        JsonNode order = data(mockMvc.perform(post("/api/v1/orders/order").with(bearer(token)))
+        JsonNode checkout = data(mockMvc.perform(post("/api/v1/orders/checkout").with(bearer(token)))
                 .andExpect(status().isOk())
                 .andReturn());
-        long orderId = order.get("id").asLong();
-        assertThat(order.get("status").asText()).isEqualTo("PENDING");
+        long orderId = checkout.get("orderId").asLong();
+        assertThat(checkout.get("paymentUrl").asText()).startsWith("https://checkout.example/");
+
+        // nothing is taken from stock or the cart until the payment is confirmed
+        Order pending = orderRepository.findById(orderId).orElseThrow();
+        assertThat(pending.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getInventory()).isEqualTo(10);
+        mockMvc.perform(get("/api/v1/carts/me").with(bearer(token)))
+                .andExpect(jsonPath("$.data.items").isNotEmpty());
+
+        String sessionId = pending.getPaymentSessionId();
+        stubSession(sessionId, true, 4000L);
+
+        // another user can't confirm someone else's payment
+        mockMvc.perform(post("/api/v1/orders/confirm").with(bearer(registerUser())).param("sessionId", sessionId))
+                .andExpect(status().isNotFound());
+
+        JsonNode order = data(mockMvc.perform(post("/api/v1/orders/confirm").with(bearer(token)).param("sessionId", sessionId))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(order.get("id").asLong()).isEqualTo(orderId);
+        assertThat(order.get("status").asText()).isEqualTo("PROCESSING");
         assertThat(order.get("totalAmount").decimalValue()).isEqualByComparingTo("40.00");
         assertThat(order.get("items").get(0).get("quantity").asInt()).isEqualTo(4);
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getInventory()).isEqualTo(6);
+        mockMvc.perform(get("/api/v1/carts/me").with(bearer(token)))
+                .andExpect(jsonPath("$.data.items").isEmpty());
+
+        // confirming again (e.g. reloading the success page) changes nothing
+        mockMvc.perform(post("/api/v1/orders/confirm").with(bearer(token)).param("sessionId", sessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PROCESSING"));
         assertThat(productRepository.findById(product.getId()).orElseThrow().getInventory()).isEqualTo(6);
 
         mockMvc.perform(get("/api/v1/orders/me").with(bearer(token)))
@@ -144,10 +182,115 @@ class ShopFlowIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/v1/orders/{orderId}/order", orderId).with(bearer(adminToken())))
                 .andExpect(status().isOk());
 
-        // the cart was emptied
-        mockMvc.perform(get("/api/v1/carts/me").with(bearer(token)))
-                .andExpect(jsonPath("$.data.items").isEmpty());
-        mockMvc.perform(post("/api/v1/orders/order").with(bearer(token)))
+        mockMvc.perform(post("/api/v1/orders/checkout").with(bearer(token)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void unpaidOrWrongAmountSessionIsRejected() throws Exception {
+        Product product = newProduct("Pen", "Acme", 5);
+        String token = registerUser();
+        addToCart(token, product, 2);
+        String sessionId = checkoutSessionId(token);
+
+        stubSession(sessionId, false, null);
+        mockMvc.perform(post("/api/v1/orders/confirm").with(bearer(token)).param("sessionId", sessionId))
+                .andExpect(status().isPaymentRequired());
+
+        stubSession(sessionId, true, 1L);
+        mockMvc.perform(post("/api/v1/orders/confirm").with(bearer(token)).param("sessionId", sessionId))
+                .andExpect(status().isPaymentRequired());
+
+        assertThat(orderStatus(sessionId))
+                .isEqualTo(OrderStatus.PENDING);
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getInventory()).isEqualTo(5);
+    }
+
+    @Test
+    void stockSoldOutDuringPaymentCancelsAndRefunds() throws Exception {
+        Product product = newProduct("Lamp", "Acme", 2);
+        String token = registerUser();
+        addToCart(token, product, 2);
+        String sessionId = checkoutSessionId(token);
+
+        jdbcTemplate.update("update product set inventory = 1 where id = ?", product.getId());
+        stubSession(sessionId, true, 2000L);
+
+        mockMvc.perform(post("/api/v1/orders/confirm").with(bearer(token)).param("sessionId", sessionId))
+                .andExpect(status().isConflict());
+
+        assertThat(orderStatus(sessionId))
+                .isEqualTo(OrderStatus.CANCELLED);
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getInventory()).isEqualTo(1);
+        verify(paymentService).refundSession(sessionId);
+    }
+
+    @Test
+    void newCheckoutCancelsTheAbandonedOne() throws Exception {
+        Product product = newProduct("Cup", "Acme", 5);
+        String token = registerUser();
+        addToCart(token, product, 1);
+        String first = checkoutSessionId(token);
+        stubSession(first, false, null);
+
+        String second = checkoutSessionId(token);
+
+        verify(paymentService).expireSession(first);
+        assertThat(orderStatus(first))
+                .isEqualTo(OrderStatus.CANCELLED);
+        assertThat(orderStatus(second))
+                .isEqualTo(OrderStatus.PENDING);
+        mockMvc.perform(post("/api/v1/orders/confirm").with(bearer(token)).param("sessionId", first))
+                .andExpect(status().isPaymentRequired());
+    }
+
+    @Test
+    void checkoutAnswers502WhenThePaymentProviderFails() throws Exception {
+        Product product = newProduct("Bag", "Acme", 5);
+        String token = registerUser();
+        addToCart(token, product, 1);
+        when(paymentService.createCheckoutSession(any(), any()))
+                .thenThrow(new PaymentProviderException("Payments are not configured"));
+
+        mockMvc.perform(post("/api/v1/orders/checkout").with(bearer(token)))
+                .andExpect(status().isBadGateway());
+        mockMvc.perform(get("/api/v1/orders/me").with(bearer(token)))
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @BeforeEach
+    void stubPaymentProvider() {
+        when(paymentService.getCurrency()).thenReturn("eur");
+        when(paymentService.createCheckoutSession(any(), any())).thenAnswer(invocation -> {
+            String id = "cs_test_" + UUID.randomUUID();
+            return new PaymentSession(id, "https://checkout.example/" + id, "open", false, null, "eur");
+        });
+    }
+
+    private void stubSession(String sessionId, boolean paid, Long amountTotal) {
+        when(paymentService.getSession(sessionId)).thenReturn(new PaymentSession(
+                sessionId, null, paid ? "complete" : "open", paid, amountTotal, "eur"));
+    }
+
+    // findByPaymentSessionId takes a lock, so it only runs inside a transaction
+    private OrderStatus orderStatus(String sessionId) {
+        return orderRepository.findAll().stream()
+                .filter(order -> sessionId.equals(order.getPaymentSessionId()))
+                .findFirst().orElseThrow()
+                .getOrderStatus();
+    }
+
+    private void addToCart(String token, Product product, int quantity) throws Exception {
+        mockMvc.perform(post("/api/v1/cartItems/me/add").with(bearer(token))
+                        .param("productId", product.getId().toString())
+                        .param("quantity", String.valueOf(quantity)))
+                .andExpect(status().isOk());
+    }
+
+    private String checkoutSessionId(String token) throws Exception {
+        long orderId = data(mockMvc.perform(post("/api/v1/orders/checkout").with(bearer(token)))
+                .andExpect(status().isOk())
+                .andReturn()).get("orderId").asLong();
+        return orderRepository.findById(orderId).orElseThrow().getPaymentSessionId();
     }
 }

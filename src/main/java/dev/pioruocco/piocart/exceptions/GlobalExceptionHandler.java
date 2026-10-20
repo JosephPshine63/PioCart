@@ -38,6 +38,17 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, e.getMessage());
     }
 
+    @ExceptionHandler(PaymentFailedException.class)
+    public ResponseEntity<ApiResponse> handlePaymentFailed(PaymentFailedException e) {
+        return build(HttpStatus.PAYMENT_REQUIRED, e.getMessage());
+    }
+
+    @ExceptionHandler(PaymentProviderException.class)
+    public ResponseEntity<ApiResponse> handlePaymentProvider(PaymentProviderException e) {
+        log.error("Payment provider error", e);
+        return build(HttpStatus.BAD_GATEWAY, e.getMessage());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse> handleDataIntegrity(DataIntegrityViolationException e) {
         return build(HttpStatus.CONFLICT, "The resource is still referenced by other data");

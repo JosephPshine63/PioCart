@@ -29,7 +29,7 @@ Il progetto gestisce diverse entità cruciali per lo shop:
 - **Product & Category**: Gestione dell'inventario. Ogni prodotto appartiene ad una determinata categoria.
 - **Image**: Sistema per la gestione e l'upload delle immagini dei prodotti, le cui informazioni sono salvate a database e recuperabili tramite apposito endpoint.
 - **Cart & CartItem**: Carrello della spesa interattivo. L'utente può aggiungere prodotti (CartItem), aggiornarne la quantita ed eliminarli.
-- **Order & OrderItem**: Elaborazione del checkout. Permette di tracciare lo stato dell'ordine e di mantenere una "fotografia" del prezzo e dell'articolo al momento in cui l'utente ha completato l'acquisto.
+- **Order & OrderItem**: Elaborazione del checkout. Permette di tracciare lo stato dell'ordine e di mantenere una "fotografia" del prezzo e dell'articolo al momento in cui l'utente ha completato l'acquisto. Il pagamento passa da **Stripe Checkout**: `POST /orders/checkout` crea l'ordine `PENDING` e la pagina di pagamento, `POST /orders/confirm?sessionId=...` verifica con Stripe che sia stato pagato l'importo giusto, scala le giacenze, svuota il carrello e porta l'ordine in `PROCESSING`.
 - **User**: Gestione dell'anagrafica degli utenti della piattaforma. Interagisce direttamente con il Carrello di sua proprietà.
 
 ## ⚙️ Setup ed Esecuzione Locale
@@ -52,6 +52,11 @@ Puoi lanciare l'applicativo direttamente tramite Maven dalla root del progetto:
 mvn spring-boot:run
 ```
 In alternativa puoi utilizzare il tuo IDE preferito avviando la classe principale `PioCartApplication.java`, che è il punto di ingresso per Spring Boot.
+
+### 3. Pagamenti con Stripe (modalità test)
+Il checkout usa una chiave segreta Stripe di test. Copia `.env.example` in `.env` (escluso da git) e inserisci la tua chiave `sk_test_...`, presa da https://dashboard.stripe.com/test/apikeys. All'avvio Spring Boot importa il file; una variabile d'ambiente `STRIPE_API_KEY` ha comunque la precedenza. Senza chiave il resto dell'app funziona, ma il checkout risponde `502`.
+
+Per pagare in test usa la carta `4242 4242 4242 4242`, con una data di scadenza futura e un CVC qualsiasi. Il ritorno da Stripe arriva su `FRONTEND_URL/checkout/confirm`.
 
 *Nota: Alla prima esecuzione, **Hibernate** andrà a generare e/o aggiornare in automatico in base alle entità Java tutte le tabelle nel database relazionale grazie alle impostazioni `ddl-auto=update`.*
 

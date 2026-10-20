@@ -70,6 +70,12 @@ export interface Order {
   items: OrderItem[];
 }
 
+export interface CheckoutResponse {
+  orderId: number;
+  /** Hosted Stripe Checkout page. */
+  paymentUrl: string;
+}
+
 export interface User {
   id: number;
   firstName: string;

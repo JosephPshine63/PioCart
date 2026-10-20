@@ -3,6 +3,7 @@ package dev.pioruocco.piocart.controller;
 import dev.pioruocco.piocart.dto.OrderDto;
 import dev.pioruocco.piocart.model.Order;
 import dev.pioruocco.piocart.response.ApiResponse;
+import dev.pioruocco.piocart.response.CheckoutResponse;
 import dev.pioruocco.piocart.security.ShopUserDetails;
 import dev.pioruocco.piocart.service.order.IOrderService;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +19,18 @@ import java.util.List;
 public class OrderController {
     private final IOrderService orderService;
 
-    @PostMapping("/order")
-    public ResponseEntity<ApiResponse> createOrder(@AuthenticationPrincipal ShopUserDetails user) {
-        Order order = orderService.placeOrder(user.getId());
-        return ResponseEntity.ok(new ApiResponse("Item Order Success!", orderService.convertToDto(order)));
+    // Orders are only placed through a payment: checkout opens it, confirm fulfils the order once it is paid
+    @PostMapping("/checkout")
+    public ResponseEntity<ApiResponse> checkout(@AuthenticationPrincipal ShopUserDetails user) {
+        CheckoutResponse checkout = orderService.checkout(user.getId());
+        return ResponseEntity.ok(new ApiResponse("Checkout started", checkout));
+    }
+
+    @PostMapping("/confirm")
+    public ResponseEntity<ApiResponse> confirmPayment(@AuthenticationPrincipal ShopUserDetails user,
+                                                      @RequestParam String sessionId) {
+        Order order = orderService.confirmPayment(user.getId(), sessionId);
+        return ResponseEntity.ok(new ApiResponse("Order confirmed", orderService.convertToDto(order)));
     }
 
     @GetMapping("/{orderId}/order")

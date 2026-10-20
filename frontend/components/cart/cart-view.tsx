@@ -53,7 +53,7 @@ export function CartView({ cart: serverCart }: { cart: Cart }) {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Spedizione</span>
-            <span>Calcolata al checkout</span>
+            <span>Gratuita</span>
           </div>
           <Separator />
           <div className="flex justify-between text-base font-semibold">
@@ -62,9 +62,8 @@ export function CartView({ cart: serverCart }: { cart: Cart }) {
           </div>
         </CardContent>
         <CardFooter>
-          {/* Enabled together with the Stripe checkout. */}
-          <Button size="lg" disabled className="w-full">
-            Procedi al checkout
+          <Button asChild size="lg" className="w-full">
+            <Link href="/checkout">Procedi al checkout</Link>
           </Button>
         </CardFooter>
       </Card>

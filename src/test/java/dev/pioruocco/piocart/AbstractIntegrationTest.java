@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pioruocco.piocart.enums.Role;
 import dev.pioruocco.piocart.model.User;
 import dev.pioruocco.piocart.repository.UserRepository;
+import dev.pioruocco.piocart.service.payment.IPaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -45,6 +47,9 @@ public abstract class AbstractIntegrationTest {
     protected UserRepository userRepository;
     @Autowired
     protected PasswordEncoder passwordEncoder;
+    // Declared here so every test class shares one application context; tests never reach Stripe
+    @MockBean
+    protected IPaymentService paymentService;
 
     protected JsonNode data(MvcResult result) throws Exception {
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("data");
