@@ -173,4 +173,4 @@ Il sito è registrato su Google Search Console come proprietà con prefisso URL 
 
 ## 👤 Autore
 
-**Giuseppe Pio Ruocco** — [GitHub](https://github.com/JosephPshine63) · [LinkedIn](https://www.linkedin.com/in/giuseppe-pio-ruocco-7b4367267/) · [Portfolio](https://josephpshine63.github.io/portfolio/) · dev.pioruocco@gmail.com
+**Giuseppe Pio Ruocco** — [GitHub](https://github.com/JosephPshine63) · [LinkedIn](https://www.linkedin.com/in/giuseppe-pio-ruocco-7b4367267/) · [Portfolio](https://gprdev.com/) · dev.pioruocco@gmail.com
